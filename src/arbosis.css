@@ -208,46 +208,40 @@ summary:focus-visible,
    .cc_* ve Webflow neexistují a nedá se na ně v Designeru kliknout. Vzhled
    proto výjimečně patří sem.
 
-   Záměrně to nevypadá jako lišta. Tmavý pruh přes celou šířku působí jako
-   nalepený nástroj na souhlas a rozbíjí vzdušnost zbytku webu. Tohle je
-   světlá karta vlevo dole na šířku textu, průsvitná s rozostřeným pozadím,
-   jedno plné tlačítko a zbytek tiché odkazy. */
+   Lišta je záměrně dvojče horní navigace: stejná tmavá zelená, stejná
+   vlasová linka, stejné hranaté tlačítko s šipkou, stejný podtržený hover.
+   Web nemá jediný stín, jediné zaoblení nad 6 px ani jednu pilulku —
+   karta s rozostřeným pozadím by na něm byla cizí těleso.
+
+   Panel s kategoriemi přebírá zápis ze sekce Postup: oranžové číslo
+   a vodorovná linka. */
 
 .cc {
   position: fixed;
   z-index: 9999;
-  bottom: 24px;
-  left: 24px;
-  width: calc(100% - 48px);
-  max-width: 27rem;
+  right: 0;
+  bottom: 0;
+  left: 0;
   pointer-events: none;
 }
 
 .cc_bar,
 .cc_panel {
   pointer-events: auto;
-  padding: 22px 24px;
-  border: 1px solid var(--border-hairline, #d9d2c4);
-  border-radius: 14px;
-  background-color: rgba(245, 242, 236, 0.94);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 20px 60px rgba(27, 58, 45, 0.16);
-  color: var(--text-body, #2a3b32);
-  transform: translateY(14px);
-  opacity: 0;
-  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0 5%;
+  background-color: var(--les, #1b3a2d);
+  border-top: 1px solid rgba(245, 242, 236, 0.14);
+  transform: translateY(100%);
+  transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cc.is-ready .cc_bar {
   transform: translateY(0);
-  opacity: 1;
 }
 
 .cc.is-gone .cc_bar,
 .cc.is-gone .cc_panel {
-  transform: translateY(14px);
-  opacity: 0;
+  transform: translateY(100%);
 }
 
 .cc_bar.is-hidden {
@@ -261,42 +255,78 @@ summary:focus-visible,
 .cc_panel.is-open {
   display: block;
   transform: translateY(0);
-  opacity: 1;
+}
+
+.cc_inner {
+  display: flex;
+  max-width: 75rem;
+  margin: 0 auto;
+  padding: 26px 0;
+  align-items: center;
+  gap: 48px;
+}
+
+/* Text musí umět růst, jinak se věta zbytečně láme na tři řádky. */
+.cc_text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cc_inner-panel {
+  display: block;
+  padding-top: 32px;
+  padding-bottom: 32px;
+}
+
+.cc_eyebrow {
+  color: rgba(245, 242, 236, 0.5);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .cc_desc {
-  margin: 0;
+  max-width: 76ch;
+  margin: 10px 0 0 0;
+  color: rgba(245, 242, 236, 0.78);
   font-size: 15px;
-  line-height: 1.6;
-  color: var(--text-muted, #5e7368);
+  line-height: 1.55;
 }
 
-.cc_link {
-  color: var(--signal-cta, #c4491f);
+.cc_inline {
+  color: var(--kost, #f5f2ec);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(245, 242, 236, 0.4);
+}
+
+.cc_inline:hover {
+  text-decoration-color: var(--signal-cta, #c4491f);
 }
 
 .cc_actions {
   display: flex;
+  flex: none;
+  margin-left: auto;
   align-items: center;
-  gap: 18px;
-  margin-top: 18px;
+  gap: 28px;
 }
 
-/* Pilulka místo hranatého tlačítka — sedí k zaoblení karty a nepůsobí
-   jako systémový dialog. */
+/* Hranaté tlačítko se šipkou — stejné jako „Poptat zahradu" v liště
+   a „Odeslat poptávku" u formuláře. */
 .cc_btn {
   display: inline-flex;
-  height: 38px;
-  padding: 0 20px;
+  height: 48px;
+  padding: 0 26px;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  gap: 10px;
+  border-radius: 6px;
   background-color: var(--signal-cta, #c4491f);
   color: #fff;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   line-height: 1;
   white-space: nowrap;
   text-decoration: none;
@@ -308,73 +338,97 @@ summary:focus-visible,
   background-color: var(--signal-cta-hover, #a83e1a);
 }
 
-/* Odmítnutí je stejně dostupné jako souhlas, jen tišší. Schované odmítnutí
-   je přesně to, za co ÚOOÚ pokutuje. */
+.cc_arrow {
+  font-weight: 600;
+}
+
+/* Tichý odkaz s oranžovým podtržením na hover — přesně jako položky menu.
+   Odmítnutí je stejně dostupné jako souhlas, jen tišší; schované odmítnutí
+   je to, za co ÚOOÚ pokutuje. */
 .cc_quiet {
+  padding-bottom: 4px;
+  border-bottom: 1px solid transparent;
+  color: rgba(245, 242, 236, 0.72);
   font-size: 15px;
-  color: var(--text-muted, #5e7368);
-  text-decoration: none;
   white-space: nowrap;
+  text-decoration: none;
   cursor: pointer;
-  transition: color 200ms cubic-bezier(0.2, 0, 0, 1);
+  transition: color 200ms cubic-bezier(0.2, 0, 0, 1), border-color 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .cc_quiet:hover {
-  color: var(--les, #1b3a2d);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  border-bottom-color: var(--signal-cta, #c4491f);
+  color: var(--kost, #f5f2ec);
 }
 
-.cc_panel-title {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-step, #6f7d6c);
+.cc_cats {
+  display: grid;
+  margin-top: 28px;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
 }
 
-.cc_cat {
-  margin-top: 20px;
+/* Číslo a linka ze sekce Postup. */
+.cc_rule {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cc_num {
+  color: var(--signal, #e8673c);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cc_line {
+  flex: 1 1 auto;
+  height: 1px;
+  background-color: rgba(245, 242, 236, 0.2);
 }
 
 .cc_cat-head {
   display: flex;
+  margin-top: 18px;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 
 .cc_cat-name {
-  font-size: 16px;
+  color: var(--kost, #f5f2ec);
+  font-size: 18px;
   font-weight: 600;
-  color: var(--les, #1b3a2d);
 }
 
 .cc_always {
+  color: rgba(245, 242, 236, 0.45);
   font-size: 13px;
-  color: var(--text-step, #6f7d6c);
 }
 
 .cc_cat-desc {
-  margin: 6px 0 0 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-muted, #5e7368);
+  margin: 10px 0 0 0;
+  color: rgba(245, 242, 236, 0.7);
+  font-size: 15px;
+  line-height: 1.55;
 }
 
 .cc_switch {
   position: relative;
   display: block;
   flex: none;
-  width: 42px;
+  width: 44px;
   height: 24px;
+  border: 1px solid rgba(245, 242, 236, 0.28);
   border-radius: 999px;
-  background-color: rgba(42, 59, 50, 0.16);
+  background-color: transparent;
   cursor: pointer;
-  transition: background-color 220ms cubic-bezier(0.2, 0, 0, 1);
+  transition: background-color 220ms cubic-bezier(0.2, 0, 0, 1), border-color 220ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .cc_switch.is-on {
+  border-color: var(--salvej, #7baf7e);
   background-color: var(--salvej, #7baf7e);
 }
 
@@ -382,45 +436,54 @@ summary:focus-visible,
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
-  background-color: #fff;
-  box-shadow: 0 1px 3px rgba(27, 58, 45, 0.24);
+  background-color: var(--kost, #f5f2ec);
   transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .cc_switch.is-on .cc_knob {
-  transform: translateX(18px);
+  transform: translateX(20px);
 }
 
 .cc_panel-actions {
   display: flex;
+  margin-top: 36px;
+  padding-top: 26px;
   align-items: center;
-  gap: 18px;
-  margin-top: 26px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-hairline, #d9d2c4);
+  justify-content: flex-end;
+  gap: 28px;
+  border-top: 1px solid rgba(245, 242, 236, 0.14);
 }
 
 @media (max-width: 767px) {
-  .cc {
-    bottom: 12px;
-    left: 12px;
-    width: calc(100% - 24px);
-    max-width: none;
-  }
-
   .cc_bar,
   .cc_panel {
-    padding: 20px;
+    padding: 0 6%;
+  }
+
+  .cc_inner {
+    display: block;
+    padding: 22px 0;
   }
 
   .cc_actions {
-    gap: 16px;
+    margin-top: 22px;
+    justify-content: flex-end;
+    gap: 22px;
   }
 
-  .cc_panel {
+  .cc_cats {
+    display: block;
+  }
+
+  .cc_cat + .cc_cat {
+    margin-top: 32px;
+  }
+
+  .cc_panel-inner,
+  .cc_inner-panel {
     max-height: 78vh;
     overflow-y: auto;
   }
@@ -436,6 +499,5 @@ summary:focus-visible,
 
   .cc_bar {
     transform: none;
-    opacity: 1;
   }
 }

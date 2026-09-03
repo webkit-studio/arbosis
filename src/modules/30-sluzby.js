@@ -9,8 +9,19 @@
    (.sluzby_photo uvnitř řádku), takže se v Designeru vyměňuje jako každá
    jiná fotka a skript se o nic nestará.
 
-   PODHOUBÍ PRO STŘÍDÁNÍ: když řádek dostane atribut data-photos se seznamem
-   dalších URL oddělených čárkou, náhled je začne po PHOTO_INTERVAL střídat.
+   FOTKY CHODÍ Z CMS. V sekci je skrytý Collection List (třída .sluzby_feed,
+   položky nesou data-sitem) s kolekcí Fotografie. Každá položka veze název
+   služby (data-sname), všechny fotky (data-sphoto) a přepínač Střídat fotky.
+   Řádek se spáruje podle nadpisu, takže se v CMS nic nečísluje ani neindexuje
+   — Šimon jen založí položku se stejným názvem, jaký má služba na webu.
+
+   PŘEPÍNAČ SE ČTE Z PODMÍNĚNÉ VIDITELNOSTI. Boolean pole se přes API na
+   atribut navázat nedá (vrací prázdný seznam cílů), zato na viditelnost ano.
+   Webflow vypnutý prvek nemaže, jen mu přidá třídu w-condition-invisible —
+   a to se z JS pozná spolehlivě.
+
+   Bez CMS položky si řádek vezme fotku, kterou má nastavenou přímo ve Webflow.
+   Web tedy funguje i s prázdnou kolekcí.
    Bez atributu (dnešní stav) drží jednu fotku.
 
    Proč to na mobilu nepřeskakuje:
@@ -37,25 +48,63 @@
   /* Podíl výšky okna, který zabere otevřená fotka. */
   var OPEN_RATIO = 0.42;
 
-  function photosOf(row) {
-    var list = [];
-    var main = $1('img', $1(SEL.sluzbyMedia, row) || row);
-    if (main) list.push(main.currentSrc || main.src);
+  /* Název služby z řádku i z CMS položky ve stejném tvaru, ať se dají
+     porovnat. Webflow kolem textu nechává mezery a nezalomitelné mezery. */
+  function key(value) {
+    return String(value || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
 
-    var extra = row.getAttribute('data-photos');
-    if (extra) {
-      extra.split(',').forEach(function (url) {
-        var trimmed = url.trim();
-        if (trimmed) list.push(trimmed);
+  /* Přečte skrytý Collection List do mapy název → { photos, cycle }. */
+  function readFeed() {
+    var map = {};
+    $$(SEL.sluzbyItem).forEach(function (item) {
+      var nameEl = $1(SEL.sluzbyName, item);
+      var name = key(nameEl && text(nameEl));
+      if (!name) return;
+
+      var photos = [];
+      $$(SEL.sluzbyFeedPhoto, item).forEach(function (img) {
+        var src = img.currentSrc || img.getAttribute('src');
+        if (src) photos.push(src);
       });
-    }
-    return list;
+
+      var flag = $1(SEL.sluzbyCycle, item);
+      map[name] = {
+        photos: photos,
+        cycle: !!flag && !flag.classList.contains('w-condition-invisible')
+      };
+    });
+    return map;
+  }
+
+  function entryFor(feed, row) {
+    return feed[key(text($1('h3', row)))] || null;
+  }
+
+  function photosOf(feed, row) {
+    var entry = entryFor(feed, row);
+    if (entry && entry.photos.length) return entry.photos;
+
+    /* Bez CMS položky zůstává fotka nastavená přímo na řádku ve Webflow. */
+    var main = $1('img', $1(SEL.sluzbyMedia, row) || row);
+    return main ? [main.currentSrc || main.src] : [];
+  }
+
+  function cyclesOf(feed, row) {
+    var entry = entryFor(feed, row);
+    return !!entry && entry.cycle;
   }
 
   onReady(function () {
     var list = $1(SEL.sluzbyList);
     var rows = $$(SEL.sluzbyRow, list);
     if (!rows.length) return;
+
+    var feed = readFeed();
 
     var desktop = window.matchMedia('(min-width: ' + DESKTOP_MIN + 'px)');
 
@@ -80,12 +129,12 @@
 
     function startRotation(row) {
       stopRotation();
-      frames = photosOf(row);
+      frames = photosOf(feed, row);
       index = 0;
       if (!frames.length) return;
       show();
-      /* Interval se pouští jen když je fotek víc — jinak by běžel naprázdno. */
-      if (frames.length > 1 && ANIM) {
+      /* Střídá se jen když si to služba v CMS vyžádala a fotek je víc. */
+      if (cyclesOf(feed, row) && frames.length > 1 && ANIM) {
         timer = setInterval(function () {
           index += 1;
           show();

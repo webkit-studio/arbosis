@@ -50,14 +50,31 @@ const PAGE = `
   <div data-slist>
     <div class="sluzby_row" data-srow>
       <span class="sluzby_number" data-sn>01</span>
+      <h3 class="sluzby_title">Návrhy a projektová dokumentace</h3>
       <div class="sluzby_media" data-smedia><img class="sluzby_photo" src="navrhy.webp" alt=""></div>
     </div>
-    <div class="sluzby_row" data-srow data-photos="a.webp, b.webp">
+    <div class="sluzby_row" data-srow>
       <span class="sluzby_number" data-sn>02</span>
+      <h3 class="sluzby_title">Realizace zahrad na klíč</h3>
       <div class="sluzby_media" data-smedia><img class="sluzby_photo" src="realizace.webp" alt=""></div>
     </div>
   </div>
   <div class="sluzby_panel" data-spanel><img src="navrhy.webp" alt=""></div>
+  <div class="sluzby_feed">
+    <div data-sitem>
+      <div class="w-dyn-list"><div role="list"><div role="listitem"><img data-sphoto src="cms-navrhy.webp" alt=""></div></div></div>
+      <div data-sname>Návrhy a projektová dokumentace</div>
+      <div data-scycle class="w-condition-invisible"></div>
+    </div>
+    <div data-sitem>
+      <div class="w-dyn-list"><div role="list">
+        <div role="listitem"><img data-sphoto src="realizace.webp" alt=""></div>
+        <div role="listitem"><img data-sphoto src="realizace-2.webp" alt=""></div>
+      </div></div>
+      <div data-sname>Realizace zahrad na klíč</div>
+      <div data-scycle></div>
+    </div>
+  </div>
   <a class="link_big" data-gtm="cta" href="#kontakt">Chci méně starostí</a>
 </section>
 
@@ -187,6 +204,20 @@ async function main() {
      proto konec, ne celý řetězec. */
   ok('náhled ukazuje fotku najetého řádku', /realizace\.webp$/.test(panel.getAttribute('src')));
   ok('náhled se otevřel', doc.querySelector('[data-spanel]').style.opacity === '1');
+
+  /* Fotka jde z CMS, ne z obrázku na řádku — feed má u první služby jinou
+     adresu než samotný řádek, takže je poznat, která vyhrála. */
+  doc.querySelectorAll('[data-srow]')[0].dispatchEvent(new win.Event('mouseenter'));
+  ok('náhled bere fotku z CMS, ne z řádku', /cms-navrhy\.webp$/.test(panel.getAttribute('src')));
+
+  /* Střídat fotky je u první služby vypnuté (w-condition-invisible). */
+  await new Promise((r) => setTimeout(r, 700));
+  ok('s vypnutým přepínačem se fotka nestřídá', /cms-navrhy\.webp$/.test(panel.getAttribute('src')));
+
+  /* U druhé je zapnuté a fotky jsou dvě. */
+  doc.querySelectorAll('[data-srow]')[1].dispatchEvent(new win.Event('mouseenter'));
+  await new Promise((r) => setTimeout(r, 700));
+  ok('se zapnutým přepínačem se fotka střídá', /realizace-2\.webp$/.test(panel.getAttribute('src')));
 }
 
 // --- 2. mobil: fotku u služeb otevírá scroll ------------------------------

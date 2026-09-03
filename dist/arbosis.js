@@ -43,6 +43,11 @@ var SEL = {
   sluzbyNumber: '[data-sn]',
   sluzbyMedia: '[data-smedia]',
   sluzbyPanel: '[data-spanel]',
+  /* skrytý Collection List s fotkami z CMS, viz 30-sluzby.js */
+  sluzbyItem: '[data-sitem]',
+  sluzbyName: '[data-sname]',
+  sluzbyCycle: '[data-scycle]',
+  sluzbyFeedPhoto: '[data-sphoto]',
 
   /* postup */
   postupSection: '[data-psec]',
@@ -313,8 +318,19 @@ function push(payload) {
    (.sluzby_photo uvnitř řádku), takže se v Designeru vyměňuje jako každá
    jiná fotka a skript se o nic nestará.
 
-   PODHOUBÍ PRO STŘÍDÁNÍ: když řádek dostane atribut data-photos se seznamem
-   dalších URL oddělených čárkou, náhled je začne po PHOTO_INTERVAL střídat.
+   FOTKY CHODÍ Z CMS. V sekci je skrytý Collection List (třída .sluzby_feed,
+   položky nesou data-sitem) s kolekcí Fotografie. Každá položka veze název
+   služby (data-sname), všechny fotky (data-sphoto) a přepínač Střídat fotky.
+   Řádek se spáruje podle nadpisu, takže se v CMS nic nečísluje ani neindexuje
+   — Šimon jen založí položku se stejným názvem, jaký má služba na webu.
+
+   PŘEPÍNAČ SE ČTE Z PODMÍNĚNÉ VIDITELNOSTI. Boolean pole se přes API na
+   atribut navázat nedá (vrací prázdný seznam cílů), zato na viditelnost ano.
+   Webflow vypnutý prvek nemaže, jen mu přidá třídu w-condition-invisible —
+   a to se z JS pozná spolehlivě.
+
+   Bez CMS položky si řádek vezme fotku, kterou má nastavenou přímo ve Webflow.
+   Web tedy funguje i s prázdnou kolekcí.
    Bez atributu (dnešní stav) drží jednu fotku.
 
    Proč to na mobilu nepřeskakuje:
@@ -341,25 +357,63 @@ function push(payload) {
   /* Podíl výšky okna, který zabere otevřená fotka. */
   var OPEN_RATIO = 0.42;
 
-  function photosOf(row) {
-    var list = [];
-    var main = $1('img', $1(SEL.sluzbyMedia, row) || row);
-    if (main) list.push(main.currentSrc || main.src);
+  /* Název služby z řádku i z CMS položky ve stejném tvaru, ať se dají
+     porovnat. Webflow kolem textu nechává mezery a nezalomitelné mezery. */
+  function key(value) {
+    return String(value || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
 
-    var extra = row.getAttribute('data-photos');
-    if (extra) {
-      extra.split(',').forEach(function (url) {
-        var trimmed = url.trim();
-        if (trimmed) list.push(trimmed);
+  /* Přečte skrytý Collection List do mapy název → { photos, cycle }. */
+  function readFeed() {
+    var map = {};
+    $$(SEL.sluzbyItem).forEach(function (item) {
+      var nameEl = $1(SEL.sluzbyName, item);
+      var name = key(nameEl && text(nameEl));
+      if (!name) return;
+
+      var photos = [];
+      $$(SEL.sluzbyFeedPhoto, item).forEach(function (img) {
+        var src = img.currentSrc || img.getAttribute('src');
+        if (src) photos.push(src);
       });
-    }
-    return list;
+
+      var flag = $1(SEL.sluzbyCycle, item);
+      map[name] = {
+        photos: photos,
+        cycle: !!flag && !flag.classList.contains('w-condition-invisible')
+      };
+    });
+    return map;
+  }
+
+  function entryFor(feed, row) {
+    return feed[key(text($1('h3', row)))] || null;
+  }
+
+  function photosOf(feed, row) {
+    var entry = entryFor(feed, row);
+    if (entry && entry.photos.length) return entry.photos;
+
+    /* Bez CMS položky zůstává fotka nastavená přímo na řádku ve Webflow. */
+    var main = $1('img', $1(SEL.sluzbyMedia, row) || row);
+    return main ? [main.currentSrc || main.src] : [];
+  }
+
+  function cyclesOf(feed, row) {
+    var entry = entryFor(feed, row);
+    return !!entry && entry.cycle;
   }
 
   onReady(function () {
     var list = $1(SEL.sluzbyList);
     var rows = $$(SEL.sluzbyRow, list);
     if (!rows.length) return;
+
+    var feed = readFeed();
 
     var desktop = window.matchMedia('(min-width: ' + DESKTOP_MIN + 'px)');
 
@@ -384,12 +438,12 @@ function push(payload) {
 
     function startRotation(row) {
       stopRotation();
-      frames = photosOf(row);
+      frames = photosOf(feed, row);
       index = 0;
       if (!frames.length) return;
       show();
-      /* Interval se pouští jen když je fotek víc — jinak by běžel naprázdno. */
-      if (frames.length > 1 && ANIM) {
+      /* Střídá se jen když si to služba v CMS vyžádala a fotek je víc. */
+      if (cyclesOf(feed, row) && frames.length > 1 && ANIM) {
         timer = setInterval(function () {
           index += 1;
           show();
@@ -907,28 +961,39 @@ function ccSave(analytics) {
 
 var CC_HTML =
   '<div class="cc_bar" data-cc-bar role="dialog" aria-live="polite" aria-label="Souhlas s cookies">' +
-  '<p class="cc_desc">M\u011b\u0159\u00edme n\u00e1v\u0161t\u011bvnost webu, abychom v\u011bd\u011bli, kter\u00e9 sekce lidi zaj\u00edmaj\u00ed. Bez souhlasu se neulo\u017e\u00ed nic. <a href="/ochrana-osobnich-udaju" class="cc_link">Podrobnosti</a></p>' +
+  '<div class="cc_inner">' +
+  '<div class="cc_text">' +
+  '<div class="cc_eyebrow">Cookies</div>' +
+  '<p class="cc_desc">M\u011b\u0159\u00edme n\u00e1v\u0161t\u011bvnost webu, abychom v\u011bd\u011bli, kter\u00e9 sekce lidi zaj\u00edmaj\u00ed. Bez souhlasu se neulo\u017e\u00ed nic a web funguje \u00fapln\u011b stejn\u011b. <a href="/ochrana-osobnich-udaju" class="cc_inline">Z\u00e1sady ochrany osobn\u00edch \u00fadaj\u016f</a></p>' +
+  '</div>' +
   '<div class="cc_actions">' +
-  '<a href="#" class="cc_btn" data-cc-accept role="button">P\u0159ijmout</a>' +
-  '<a href="#" class="cc_quiet" data-cc-reject role="button">Jen nezbytn\u00e9</a>' +
   '<a href="#" class="cc_quiet" data-cc-settings role="button">Nastaven\u00ed</a>' +
+  '<a href="#" class="cc_quiet" data-cc-reject role="button">Jen nezbytn\u00e9</a>' +
+  '<a href="#" class="cc_btn" data-cc-accept role="button">P\u0159ijmout<span class="cc_arrow">\u2192</span></a>' +
+  '</div>' +
   '</div>' +
   '</div>' +
   '<div class="cc_panel" data-cc-panel role="dialog" aria-modal="true" aria-label="Nastaven\u00ed cookies">' +
-  '<div class="cc_panel-title">Co se m\u011b\u0159\u00ed</div>' +
+  '<div class="cc_inner cc_inner-panel">' +
+  '<div class="cc_eyebrow">Nastaven\u00ed cookies</div>' +
+  '<div class="cc_cats">' +
   '<div class="cc_cat">' +
+  '<div class="cc_rule"><span class="cc_num">01</span><span class="cc_line"></span></div>' +
   '<div class="cc_cat-head"><span class="cc_cat-name">Nezbytn\u00e9</span><span class="cc_always">v\u017edy zapnuto</span></div>' +
-  '<p class="cc_cat-desc">Odesl\u00e1n\u00ed formul\u00e1\u0159e a zapamatov\u00e1n\u00ed t\u00e9hle volby. Bez nich web nefunguje.</p>' +
+  '<p class="cc_cat-desc">Odesl\u00e1n\u00ed formul\u00e1\u0159e a zapamatov\u00e1n\u00ed t\u00e9hle volby. Bez nich web nefunguje, proto se na n\u011b ptát nemus\u00edme.</p>' +
   '</div>' +
   '<div class="cc_cat">' +
+  '<div class="cc_rule"><span class="cc_num">02</span><span class="cc_line"></span></div>' +
   '<div class="cc_cat-head"><span class="cc_cat-name">Analytick\u00e9</span>' +
   '<a href="#" class="cc_switch" data-cc-toggle role="switch" aria-checked="false"><span class="cc_knob"></span></a>' +
   '</div>' +
-  '<p class="cc_cat-desc">Google Analytics. Souhrnn\u011b: kolik lid\u00ed p\u0159i\u0161lo a odkud. Nic, pod\u013ee \u010deho by \u0161lo poznat konkr\u00e9tn\u00edho \u010dlov\u011bka.</p>' +
+  '<p class="cc_cat-desc">Google Analytics. Souhrnn\u011b: kolik lid\u00ed p\u0159i\u0161lo a odkud. Nic, podle \u010deho by \u0161lo poznat konkr\u00e9tn\u00edho \u010dlov\u011bka.</p>' +
+  '</div>' +
   '</div>' +
   '<div class="cc_panel-actions">' +
-  '<a href="#" class="cc_btn" data-cc-save role="button">Ulo\u017eit volbu</a>' +
-  '<a href="#" class="cc_quiet" data-cc-accept role="button">P\u0159ijmout v\u0161e</a>' +
+  '<a href="#" class="cc_quiet" data-cc-save role="button">Ulo\u017eit volbu</a>' +
+  '<a href="#" class="cc_btn" data-cc-accept role="button">P\u0159ijmout v\u0161e<span class="cc_arrow">\u2192</span></a>' +
+  '</div>' +
   '</div>' +
   '</div>';
 

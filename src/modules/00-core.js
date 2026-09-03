@@ -35,6 +35,11 @@ var SEL = {
   sluzbyNumber: '[data-sn]',
   sluzbyMedia: '[data-smedia]',
   sluzbyPanel: '[data-spanel]',
+  /* skrytý Collection List s fotkami z CMS, viz 30-sluzby.js */
+  sluzbyItem: '[data-sitem]',
+  sluzbyName: '[data-sname]',
+  sluzbyCycle: '[data-scycle]',
+  sluzbyFeedPhoto: '[data-sphoto]',
 
   /* postup */
   postupSection: '[data-psec]',
