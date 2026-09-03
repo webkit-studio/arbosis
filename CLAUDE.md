@@ -127,6 +127,17 @@ Webflow publikuje **celý web**, ne jen tvoje změny. Před publikací si vytáh
 `lastPublished`, má někdo něco rozdělaného. Pak se zeptej, nepublikuj naslepo.
 **„Kdy publikovat" je rozhodnutí Lukáše**, ne tvoje.
 
+### Zápis nastavení stránky shazuje draft
+
+`data_pages_tool > update_page_settings` umí vrátit `draft: false`, i když se
+draft v požadavku vůbec neposílá. Stalo se to dvakrát: jednou při zápisu
+`openGraph`, podruhé po přestavbě obsahu stránky.
+
+**Po každém zásahu do stránky, která má zůstat draft, si přečti
+`get_page_metadata` a `draft` v případě potřeby nastav zpátky.** Spolehnout se
+na to, že se hodnota nezmění, nejde — a stránka, která přestane být draft, jde
+ven při nejbližší publikaci celého webu.
+
 ### Rozpracovaná verze nepatří na domovskou stránku
 
 Stalo se 3. 9. 2026: nová domovská stránka se stavěla rovnou na `/`, zatímco
