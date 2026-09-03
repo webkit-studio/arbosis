@@ -36,18 +36,14 @@ body {
 
 /* --- Vztahy rodič → potomek ----------------------------------------------
    Webflow umí hover na prvku, ale ne „při najetí na řádek přebarvi číslo
-   uvnitř". To je vztah dvou tříd a v style panelu se zapsat nedá. */
+   uvnitř". To je vztah dvou tříd a v style panelu se zapsat nedá.
+
+   Barvy dojíždějících čísel v Postupu tu naopak NEJSOU. Skript jim přidává
+   třídy .is-reached / .is-final přímo na prvek, takže jde o obyčejné kombo
+   třídy — a ty patří do Webflow. Jsou nastavené v Designeru. */
 
 .sluzby_row:hover .sluzby_number {
   color: var(--signal-soft);
-}
-
-.postup_step.is-reached .postup_step-number {
-  color: var(--signal-cta);
-}
-
-.postup_step.is-final .postup_step-number {
-  color: var(--list);
 }
 
 /* --- FAQ -----------------------------------------------------------------

@@ -20,17 +20,32 @@ a odhadne rozsah.
 
 ## Co se musí doklikat ručně
 
-API tyhle dvě věci nenastaví, jsou v Designeru a v nastavení webu:
+Zbývá jediná věc, kterou API nenastaví:
 
-1. **Název formuláře** — dnes „Html Form", má být **„Poptávka"**.
-   Designer → vybrat Form Block → panel Settings → Name.
-   Název jde do předmětu notifikačního e-mailu.
-2. **Cílový e-mail notifikace** — Site settings → Forms → Form notification
-   email → **info@arbosis.cz**. Bez toho chodí poptávky na e-mail majitele
-   účtu Webflow.
+**Cílový e-mail notifikace** — Site settings → Forms → Form notification
+email → **info@arbosis.cz**. Bez toho chodí poptávky na e-mail majitele účtu
+Webflow. Dokud to nesedí, formulář **neodesílat do světa**. Test: odeslat
+poptávku a zkontrolovat, že přišla na info@arbosis.cz.
 
-Dokud obojí nesedí, formulář **neodesílat do světa**. Test: odeslat poptávku
-a zkontrolovat, že přišla na info@arbosis.cz a má rozumný předmět.
+Volitelně ještě text tlačítka během odesílání (Designer → tlačítko → Settings
+→ Waiting text). Dnes je tam anglické „Please wait…" — ukáže se na zlomek
+vteřiny mezi kliknutím a potvrzením. V markupu se přepsat nedá, Webflow si
+tohle pole drží sám.
+
+## Čeho si všimnout při úpravách
+
+Prvky formuláře mají ve Webflow vlastní model nastavení a **část z něj přes
+API zapsat nejde**:
+
+| Vlastnost | Přes API | Jak to obejít |
+|---|---|---|
+| `placeholder` | ne (atribut se odmítne) | zapsat rovnou do markupu při vkládání přes WHTML; prázdná hodnota `placeholder=""` projde a pole zůstane čisté |
+| popisek tlačítka (`value`) | ne | totéž — `<input type="submit" value="…">` v markupu |
+| `data-wait` | ne | jen v Designeru |
+| `for` u popisku | ano (`set_attributes`) | bez něj Webflow vyrenderuje `for=""` a klik na popisek nefunguje |
+
+Když se pole doplňuje, vkládej ho přes WHTML s kompletním markupem. Založit
+prázdné pole a dosypat vlastnosti atributy nefunguje.
 
 ## Měření
 
