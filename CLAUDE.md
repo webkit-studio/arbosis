@@ -127,6 +127,22 @@ Webflow publikuje **celý web**, ne jen tvoje změny. Před publikací si vytáh
 `lastPublished`, má někdo něco rozdělaného. Pak se zeptej, nepublikuj naslepo.
 **„Kdy publikovat" je rozhodnutí Lukáše**, ne tvoje.
 
+### Rozpracovaná verze nepatří na domovskou stránku
+
+Stalo se 3. 9. 2026: nová domovská stránka se stavěla rovnou na `/`, zatímco
+na produkci měla běžet stránka „Webové stránky právě upravujeme". Stačilo
+jedno kliknutí na Publish v Designeru a nehotový web byl venku, i s šedými
+placeholdery.
+
+Spoléhat na to, že nikdo nezmáčkne Publish, není ochrana. **Dokud klient
+návrh neschválí, staví se na samostatné stránce s `draft: true`.** Draft se
+nepublikuje ani při publikaci celého webu, takže omyl nemá jak proniknout
+ven. Na `/` se obsah překlopí až po schválení.
+
+Zpátky na produkci se stránka dostane tak, že se rozpracovaná verze nejdřív
+odloží přes `data_pages_tool > create_page` s `duplicateOf` (nic se neztratí),
+teprve pak se `/` přestaví.
+
 ## Obsah a texty
 
 - **Čeština.** En dash „–" (U+2013), nikdy em dash. „e-mail" se spojovníkem.
