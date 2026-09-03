@@ -40,7 +40,7 @@
   onReady(function () {
     var list = $1(SEL.sluzbyList);
     var panel = $1(SEL.sluzbyPanel);
-    var image = $1(SEL.sluzbyPanelImg, panel);
+    var image = $1('img', panel);
     var rows = $$(SEL.sluzbyRow, list);
     if (!image || !rows.length) return;
 

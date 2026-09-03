@@ -16,6 +16,7 @@
   var IMAGE_DELAY = 500;
   var COUNTER_DURATION = 1100;
   var COUNTER_DELAY = 950;
+  var DEFAULT_PARALLAX = 0.04;
 
   function setCounters(counters, animated) {
     counters.forEach(function (el) {
@@ -92,7 +93,7 @@
       setTimeout(play, delay);
     }
 
-    var image = $1(SEL.heroImage, hero);
+    var image = $1('img', hero);
     if (image && !image.complete) {
       image.addEventListener('load', function () { go(IMAGE_DELAY); }, { once: true });
       image.addEventListener('error', function () { go(0); }, { once: true });
@@ -101,15 +102,12 @@
       go(IMAGE_DELAY);
     }
 
-    /* Jemný paralax fotky na pozadí. */
-    var parallax = $$(SEL.heroImage);
-    if (parallax.length) {
+    /* Jemný paralax fotky na pozadí. Rychlost sedí na sekci, ne na obrázku —
+       prvek Image ve Webflow vlastní atributy zahazuje (viz 00-core.js). */
+    if (image) {
+      var rate = parseFloat(hero.getAttribute('data-plx')) || DEFAULT_PARALLAX;
       onScroll(function () {
-        var y = window.pageYOffset;
-        parallax.forEach(function (el) {
-          var rate = parseFloat(el.getAttribute('data-plx')) || 0.04;
-          el.style.transform = 'translateY(' + y * rate + 'px)';
-        });
+        image.style.transform = 'translateY(' + window.pageYOffset * rate + 'px)';
       });
     }
   });

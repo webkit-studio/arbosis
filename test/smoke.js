@@ -34,8 +34,8 @@ const PAGE = `
   <a class="btn is-small" data-ncta href="#kontakt">Poptat zahradu</a>
 </div>
 
-<section id="hero" data-hero>
-  <img data-plx="0.04" src="hero.webp" alt="">
+<section id="hero" data-hero data-plx="0.04">
+  <img src="hero.webp" alt="">
   <div data-hveil></div>
   <div data-hsub>Zahrady</div>
   <h1><span><span data-hwi>Návrh</span></span><span><span data-hwi>Realizace</span></span></h1>
@@ -54,7 +54,7 @@ const PAGE = `
       <div class="sluzby_media" data-smedia><img class="sluzby_photo" src="realizace.webp" alt=""></div>
     </div>
   </div>
-  <div class="sluzby_panel" data-spanel><img data-spimg src="navrhy.webp" alt=""></div>
+  <div class="sluzby_panel" data-spanel><img src="navrhy.webp" alt=""></div>
   <a class="link_big" data-gtm="cta" href="#kontakt">Chci méně starostí</a>
 </section>
 
@@ -170,11 +170,12 @@ async function main() {
     win.dataLayer.some((e) => e.event === 'faq_open' && e.question === 'Kam jezdíte?'));
 
   /* Náhled u služeb bere fotku z řádku, ne z pevného seznamu v kódu. */
-  const panel = doc.querySelector('[data-spimg]');
+  const panel = doc.querySelector('[data-spanel] img');
   doc.querySelectorAll('[data-srow]')[1].dispatchEvent(new win.Event('mouseenter'));
   /* Adresa se v prohlížeči i v jsdom ukládá jako absolutní — porovnává se
      proto konec, ne celý řetězec. */
   ok('náhled ukazuje fotku najetého řádku', /realizace\.webp$/.test(panel.getAttribute('src')));
+  ok('náhled se otevřel', doc.querySelector('[data-spanel]').style.opacity === '1');
 }
 
 // --- 2. vypnuté animace ---------------------------------------------------

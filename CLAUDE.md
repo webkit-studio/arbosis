@@ -70,6 +70,18 @@ Kompletní mapa je v `src/modules/00-core.js` v objektu `SEL`. Nejdůležitějš
 
 Nové tlačítko se měří tím, že dostane `data-gtm="cta"`. Do kódu se nesahá.
 
+### Prvek Image vlastní atributy zahazuje
+
+**Na `<img>` hook nikdy nedávej.** Ověřeno na publikované stránce: atributy
+`data-plx` a `data-spimg` zapsané přes `data_whtml_builder` na obrázek
+v markupu nebyly, zatímco stejné atributy na obalových divech zůstaly.
+Prvek Image má ve Webflow vlastní model nastavení (zdroj, alt) a cokoliv
+navíc při ukládání odpadne.
+
+Hook proto patří na obal a obrázek se uvnitř najde strukturálně —
+`$1('img', obal)`. V náhledu služeb i v heru je jediný obrázek, takže je
+výběr jednoznačný a nezávisí ani na třídě, ani na atributu.
+
 ### Střídání fotek u služeb („podhoubí")
 
 Dnes drží každý řádek služeb jednu fotku — bere se z prvku `.sluzby_photo`

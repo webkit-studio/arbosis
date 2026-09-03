@@ -8,6 +8,12 @@
    HOOK ATRIBUTY: moduly cílí na data-atributy, ne na názvy tříd. Třídu
    ve Webflow kdokoliv přejmenuje bez varování, data-atribut ne — je vidět
    v panelu nastavení prvku a nikdo ho omylem nepřepíše stylováním.
+
+   POZOR — prvek Image ve Webflow vlastní data-atributy ZAHAZUJE. Ověřeno
+   na publikované stránce: data-plx i data-spimg z markupu zmizely, zatímco
+   stejné atributy na obalových divech zůstaly. Hook proto nikdy nepatří na
+   <img>; dává se na obal a obrázek se uvnitř najde strukturálně ($1('img', obal)).
+   Uvnitř náhledu i hera je jediný obrázek, takže je výběr jednoznačný.
    ========================================================================== */
 
 var SEL = {
@@ -21,7 +27,6 @@ var SEL = {
   heroWord: '[data-hwi]',
   heroFade: '[data-hsub]',
   heroVeil: '[data-hveil]',
-  heroImage: '[data-plx]',
   counter: '[data-count]',
 
   /* služby */
@@ -30,7 +35,6 @@ var SEL = {
   sluzbyNumber: '[data-sn]',
   sluzbyMedia: '[data-smedia]',
   sluzbyPanel: '[data-spanel]',
-  sluzbyPanelImg: '[data-spimg]',
 
   /* postup */
   postupSection: '[data-psec]',

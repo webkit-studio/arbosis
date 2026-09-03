@@ -16,6 +16,12 @@
    HOOK ATRIBUTY: moduly cílí na data-atributy, ne na názvy tříd. Třídu
    ve Webflow kdokoliv přejmenuje bez varování, data-atribut ne — je vidět
    v panelu nastavení prvku a nikdo ho omylem nepřepíše stylováním.
+
+   POZOR — prvek Image ve Webflow vlastní data-atributy ZAHAZUJE. Ověřeno
+   na publikované stránce: data-plx i data-spimg z markupu zmizely, zatímco
+   stejné atributy na obalových divech zůstaly. Hook proto nikdy nepatří na
+   <img>; dává se na obal a obrázek se uvnitř najde strukturálně ($1('img', obal)).
+   Uvnitř náhledu i hera je jediný obrázek, takže je výběr jednoznačný.
    ========================================================================== */
 
 var SEL = {
@@ -29,7 +35,6 @@ var SEL = {
   heroWord: '[data-hwi]',
   heroFade: '[data-hsub]',
   heroVeil: '[data-hveil]',
-  heroImage: '[data-plx]',
   counter: '[data-count]',
 
   /* služby */
@@ -38,7 +43,6 @@ var SEL = {
   sluzbyNumber: '[data-sn]',
   sluzbyMedia: '[data-smedia]',
   sluzbyPanel: '[data-spanel]',
-  sluzbyPanelImg: '[data-spimg]',
 
   /* postup */
   postupSection: '[data-psec]',
@@ -201,6 +205,7 @@ function push(payload) {
   var IMAGE_DELAY = 500;
   var COUNTER_DURATION = 1100;
   var COUNTER_DELAY = 950;
+  var DEFAULT_PARALLAX = 0.04;
 
   function setCounters(counters, animated) {
     counters.forEach(function (el) {
@@ -277,7 +282,7 @@ function push(payload) {
       setTimeout(play, delay);
     }
 
-    var image = $1(SEL.heroImage, hero);
+    var image = $1('img', hero);
     if (image && !image.complete) {
       image.addEventListener('load', function () { go(IMAGE_DELAY); }, { once: true });
       image.addEventListener('error', function () { go(0); }, { once: true });
@@ -286,15 +291,12 @@ function push(payload) {
       go(IMAGE_DELAY);
     }
 
-    /* Jemný paralax fotky na pozadí. */
-    var parallax = $$(SEL.heroImage);
-    if (parallax.length) {
+    /* Jemný paralax fotky na pozadí. Rychlost sedí na sekci, ne na obrázku —
+       prvek Image ve Webflow vlastní atributy zahazuje (viz 00-core.js). */
+    if (image) {
+      var rate = parseFloat(hero.getAttribute('data-plx')) || DEFAULT_PARALLAX;
       onScroll(function () {
-        var y = window.pageYOffset;
-        parallax.forEach(function (el) {
-          var rate = parseFloat(el.getAttribute('data-plx')) || 0.04;
-          el.style.transform = 'translateY(' + y * rate + 'px)';
-        });
+        image.style.transform = 'translateY(' + window.pageYOffset * rate + 'px)';
       });
     }
   });
@@ -342,7 +344,7 @@ function push(payload) {
   onReady(function () {
     var list = $1(SEL.sluzbyList);
     var panel = $1(SEL.sluzbyPanel);
-    var image = $1(SEL.sluzbyPanelImg, panel);
+    var image = $1('img', panel);
     var rows = $$(SEL.sluzbyRow, list);
     if (!image || !rows.length) return;
 
