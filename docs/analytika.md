@@ -1,36 +1,47 @@
 # Analytika, GTM, Search Console a heatmapy
 
-Shrnutí pro netrpělivé: **účty musí založit Šimon pod svým Google účtem**,
-já je založit nemůžu a ani nechci. Jakmile pošle tři identifikátory a přístup
-pro `lukas@webkit.studio`, zbytek je otázka jednoho zápisu do custom kódu —
-měřicí kód na webu už je hotový a čeká.
+Stav k 3. 9. 2026: **identifikátory dorazily a web je napojený.**
+GTM kontejner `GTM-KSXFM72X` se načítá ze Site settings → Custom Code → Head,
+před ním běží Consent Mode v2 s výchozím „zamítnuto". Zbývá naimportovat do
+kontejneru tagy — hotový soubor leží v `docs/gtm-arbosis-kontejner.json`.
+
+| Co | Hodnota |
+|---|---|
+| GTM kontejner | `GTM-KSXFM72X` |
+| GA4 měřicí ID | `G-788G7VTDM6` |
 
 ---
 
-## Proč účty nezakládám já
+## Přístupy: co doopravdy potřebuju
+
+**Do GTM ani do GA4 se přihlásit neumím a nepotřebuju.** Nemám Google účet,
+kterému by šlo dát oprávnění, a přístup přes API tady k dispozici není.
+Dělá se to obráceně — já připravím konfiguraci jako soubor, ty ji naimportuješ.
+
+Takže od tebe potřebuju jen dvě věci, obojí je veřejný identifikátor, nic
+citlivého: **GTM-KSXFM72X** a **G-788G7VTDM6**. Oboje už mám. Hotovo.
+
+Co zůstává na klikání v prohlížeči (a dá se to celé za deset minut):
+
+1. **Import tagů do GTM.** tagmanager.google.com → kontejner `arbosis.cz` →
+   Admin → **Import Container** → nahraj `docs/gtm-arbosis-kontejner.json` →
+   Workspace: *Existing → Default Workspace* → **Merge**, ne Overwrite →
+   Confirm. Pak nahoře **Submit** a **Publish**.
+   Import založí Google tag pro GA4 a pět tagů pro události z webu.
+2. **Konverze v GA4.** analytics.google.com → Admin → Events → u události
+   `contact_form_submit` přepnout **Mark as key event**.
+   Ta se objeví až potom, co ji web poprvé pošle.
+3. **Search Console** neřeš, ověřím ji přes DNS na Webglobe.
+
+Když import spadne na chybu, pošli screenshot — soubor opravím. Nesestavuju
+ho naslepo, ale formát GTM exportu se občas mění a nemám jak ho tady odzkoušet.
+
+### Proč účty nezakládám já
 
 Nabídka i zápis z callu to mají takhle schválené: *„na váš Google účet, ať
-data i účty zůstanou vaše, potřebuji jen dát přístup na lukas@webkit.studio."*
-Důvod je praktický, ne formální — účet založený pode mnou by se při předání
-musel migrovat, a u Search Console se historie dat nepřenáší vůbec.
-
-Technicky navíc: Google nemá API na zakládání GA4 property ani GTM
-kontejneru „z ničeho" — vždycky se to váže na přihlášený Google účet.
-
-## Co potřebuju od Šimona
-
-| # | Co | Kde to vzniká | Jak to vypadá |
-|---|---|---|---|
-| 1 | **GTM kontejner** | tagmanager.google.com → nový účet „Arbosis Plants" → kontejner `arbosis.cz`, typ Web | `GTM-XXXXXXX` |
-| 2 | **GA4 property** | analytics.google.com → Admin → Create property → datový stream Web pro `arbosis.cz` | `G-XXXXXXXXXX` |
-| 3 | **Přístup** | v obou nástrojích Admin → Access management → přidat `lukas@webkit.studio` | GTM: Publish · GA4: Editor |
-
-Search Console **nepotřebuje nic od Šimona** — ověřím ji přes DNS záznam na
-Webglobe, kam mám přístup (viz níž).
-
-Google Business Profile je samostatná věc, ověření trvá až 14 dnů. Čím dřív
-se rozjede, tím líp — pro zahradnickou firmu na doporučení dělá mapa
-a recenze víc než web samotný.
+data i účty zůstanou vaše."* Důvod je praktický — účet založený pode mnou by
+se při předání musel migrovat a u Search Console se historie dat nepřenáší
+vůbec.
 
 ## Co je na webu už hotové
 
@@ -60,48 +71,38 @@ Nad rámec událostí výš měří GA4 samo (Enhanced measurement): zobrazení
 stránky, scroll do 90 %, odchozí odkazy, stažení souborů, vyhledávání na webu.
 To stačí. Když bude po pár týdnech vidět, že něco chybí, doplní se cíleně.
 
-## Postup napojení, až identifikátory dorazí
+## Co je napojené a co zbývá
 
-1. **GTM loader do webu.** Do Site settings → Custom Code → Head přibude blok
-   níž. Píše se přes API a **vždy se posílá celý obsah pole**, ne jen nový
-   blok — jinak zmizí to, co tam už je.
+**Hotovo v Site settings → Custom Code → Head** (v tomhle pořadí, na pořadí
+záleží):
 
-   ```html
-   <!-- Google Tag Manager -->
-   <script>
-     (function (w, d, s, l, i) {
-       w[l] = w[l] || [];
-       w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
-       var f = d.getElementsByTagName(s)[0],
-         j = d.createElement(s),
-         dl = l != 'dataLayer' ? '&l=' + l : '';
-       j.async = true;
-       j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
-       f.parentNode.insertBefore(j, f);
-     })(window, document, 'script', 'dataLayer', 'GTM-XXXXXXX');
-   </script>
-   <!-- End Google Tag Manager -->
-   ```
+1. `Consent Mode v2` — výchozí stav všech kategorií je `denied`,
+   `wait_for_update: 500`. Musí běžet **před** GTM, jinak by se stihlo
+   odeslat měření dřív, než se návštěvník k souhlasu dostane.
+2. GTM loader s `GTM-KSXFM72X`.
+3. Bundle z jsDelivr.
 
-   Webflow má i nativní pole pro Google Tag (Site settings → Integrations).
-   **Nepoužívat souběžně s GTM** — GA4 by se načetlo dvakrát a všechno
-   se počítalo dvojmo. Buď nativní pole, nebo GTM. Jdeme přes GTM.
+**Přímý gtag.js s `G-788G7VTDM6` jsem z hlavičky odstranil.** Byl tam
+z dřívějška a vedle GTM by měřil každou návštěvu dvakrát. GA4 teď posílá
+jedině kontejner.
 
-2. **GA4 v GTM.** Tag „Google Tag" s měřicím ID `G-XXXXXXXXXX`, trigger
-   All Pages. Pak pět tagů GA4 Event navázaných na Custom Event triggery
-   podle tabulky výš.
+`noscript` iframe od GTM tam **záměrně není**. Gate na souhlas je postavený
+na JavaScriptu; návštěvník bez JS by přes iframe načetl kontejner mimo něj.
+GA4 se bez JS stejně nezměří, takže se tím o nic nepřichází.
 
-3. **Konverze.** V GA4 → Admin → Events označit `contact_form_submit` jako
-   klíčovou událost. To je jediné číslo, které v tomhle projektu opravdu
-   rozhoduje.
+**Zbývá:**
 
-4. **Search Console.** Ověření přes DNS TXT záznam na Webglobe (mám přístup).
-   Ověřuju **doménovou property** `arbosis.cz` — pokrývá www i bez www,
-   http i https, na rozdíl od ověření přes HTML tag. Pak přidat sitemapu:
-   Webflow ji generuje sám na `https://arbosis.cz/sitemap.xml`.
+- import `docs/gtm-arbosis-kontejner.json` do GTM (viz Přístupy výš),
+- v GA4 označit `contact_form_submit` jako klíčovou událost,
+- **Search Console** — ověření přes DNS TXT záznam na Webglobe (mám přístup).
+  Ověřuju **doménovou property** `arbosis.cz`; pokrývá www i bez www, http
+  i https, na rozdíl od ověření přes HTML tag. Pak sitemapa, kterou Webflow
+  generuje sám na `https://arbosis.cz/sitemap.xml`.
+- **Propojení** GA4 → Admin → Product links → Search Console. Bez toho není
+  v GA4 vidět, na jaké dotazy web lidi našli.
 
-5. **Propojení.** GA4 → Admin → Product links → Search Console. Bez toho se
-   v GA4 nezobrazí, na jaké dotazy web lidi našli.
+Webflow má i nativní pole pro Google Tag (Site settings → Integrations).
+**Nepoužívat souběžně s GTM** — zase dvojí měření. Jdeme přes GTM.
 
 ## Cookie lišta — bez ní se měřit nesmí
 
@@ -117,11 +118,16 @@ souhlasíte" neplatí. Do souhlasu tedy GA4 ani Clarity běžet nesmí.
 - **Google Consent Mode v2** v GTM — tagy čekají na souhlas a po jeho
   udělení se dopočítá modelovaný provoz.
 
-Pozor na rozsah: **texty a právní posouzení nejsou součástí nabídky**
-(bod 6 cenové nabídky). Lišta a technické napojení ano, obsah zásad
-zpracování osobních údajů dodá Šimon nebo jeho právník. Odkaz na stránku
-`/ochrana-osobnich-udaju` je v patičce už teď a míří na stránku, která
-zatím neexistuje — musí vzniknout před spuštěním.
+Stránka `/ochrana-osobnich-udaju` už existuje (zatím jako draft) a text
+na ní je napsaný — správce, údaje z formuláře, lhůty, zpracovatelé, cookies,
+práva, ÚOOÚ. **Není to právní posudek.** Texty ani právní posouzení nejsou
+součástí nabídky (bod 6), takže než se web spustí, měl by přes to přejet
+Šimonův právník. Dvě věci se navíc musí potvrdit, ne odhadnout:
+
+- **3 roky** u poptávek, ze kterých nevznikla zakázka — je to obhajitelná
+  lhůta odvozená od promlčecí doby, ne fakt z firmy.
+- Zda poptávky nekončí ještě někde jinde než v Google Workspace (CRM,
+  sdílený disk, tabulka). Každé takové místo patří do seznamu zpracovatelů.
 
 ## Heatmapy
 
