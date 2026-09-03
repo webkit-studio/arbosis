@@ -93,7 +93,7 @@ const PAGE = `
   <div data-fwrap>
     <div data-ring></div><div data-ring-b></div>
     <div class="w-form">
-      <form id="form-poptavka"><input name="E-mail"><button type="submit">Odeslat</button></form>
+      <form id="form-poptavka"><input name="E-mail"><div class="form_hp"><input name="Website"></div><button type="submit">Odeslat</button></form>
       <div class="w-form-done" style="display:none">Děkujeme</div>
       <div class="w-form-fail" style="display:none">Chyba</div>
     </div>
@@ -243,7 +243,32 @@ async function main() {
   ok('náhled u kurzoru zůstal zavřený', panel.style.opacity !== '1');
 }
 
-// --- 3. cookie lišta ------------------------------------------------------
+// --- 3. ochrana formuláře proti botům --------------------------------------
+{
+  const win = run('OCHRANA FORMULÁŘE');
+  const doc = win.document;
+  const form = doc.querySelector('#form-poptavka');
+
+  /* Robot vyplnil past. */
+  doc.querySelector('[name="Website"]').value = 'http://spam.example';
+  let ev = new win.Event('submit', { bubbles: true, cancelable: true });
+  form.dispatchEvent(ev);
+  ok('vyplněná past odeslání zastaví', ev.defaultPrevented === true);
+
+  /* Prázdná past, ale odesláno hned po načtení — pod třemi vteřinami. */
+  doc.querySelector('[name="Website"]').value = '';
+  ev = new win.Event('submit', { bubbles: true, cancelable: true });
+  form.dispatchEvent(ev);
+  ok('příliš rychlé odeslání se zastaví', ev.defaultPrevented === true);
+
+  /* Člověk: past prázdná a od načtení uběhl čas. */
+  await new Promise((r) => setTimeout(r, 3100));
+  ev = new win.Event('submit', { bubbles: true, cancelable: true });
+  form.dispatchEvent(ev);
+  ok('poctivé odeslání projde', ev.defaultPrevented === false);
+}
+
+// --- 4. cookie lišta ------------------------------------------------------
 {
   const win = run('COOKIE LIŠTA');
   const doc = win.document;
@@ -274,7 +299,7 @@ async function main() {
     (win.dataLayer || []).some((e) => e && e.event === 'cookie_consent' && e.consent_analytics === 'granted'));
 }
 
-// --- 4. vypnuté animace ---------------------------------------------------
+// --- 5. vypnuté animace ---------------------------------------------------
 {
   const win = run('VYPNUTÉ ANIMACE (prefers-reduced-motion)', { reducedMotion: true });
   const doc = win.document;
