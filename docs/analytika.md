@@ -120,14 +120,16 @@ souhlasíte" neplatí. Do souhlasu tedy GA4 ani Clarity běžet nesmí.
 
 Stránka `/ochrana-osobnich-udaju` už existuje (zatím jako draft) a text
 na ní je napsaný — správce, údaje z formuláře, lhůty, zpracovatelé, cookies,
-práva, ÚOOÚ. **Není to právní posudek.** Texty ani právní posouzení nejsou
-součástí nabídky (bod 6), takže než se web spustí, měl by přes to přejet
-Šimonův právník. Dvě věci se navíc musí potvrdit, ne odhadnout:
+práva, ÚOOÚ.
 
-- **3 roky** u poptávek, ze kterých nevznikla zakázka — je to obhajitelná
-  lhůta odvozená od promlčecí doby, ne fakt z firmy.
-- Zda poptávky nekončí ještě někde jinde než v Google Workspace (CRM,
-  sdílený disk, tabulka). Každé takové místo patří do seznamu zpracovatelů.
+Dvě věci, které nešly odhadnout, klient 3. 9. 2026 potvrdil:
+
+- **3 roky** u poptávek, ze kterých nevznikla zakázka.
+- Poptávky nekončí nikde jinde než v Google Workspace, takže seznam
+  zpracovatelů je úplný.
+
+**Není to právní posudek.** Texty ani právní posouzení nejsou součástí
+nabídky (bod 6). Před spuštěním by přes to měl přejet právník.
 
 ## Heatmapy
 
