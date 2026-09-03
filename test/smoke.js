@@ -27,6 +27,9 @@ const ok = (name, condition) => {
     requestAnimationFrame, takže hned po dispatchi ještě nic nezměnily. */
 const frame = () => new Promise((resolve) => setTimeout(resolve, 30));
 
+/** Obrázek uvnitř obalu — hook je na obalu, ne na <img> (viz 00-core.js). */
+const $img = (wrap) => wrap.querySelector('img');
+
 const PAGE = `
 <div class="nav_component" data-nav>
   <a class="nav_link" data-nl="sluzby" href="#sluzby">Služby</a>
@@ -93,7 +96,7 @@ const PAGE = `
   </details>
 </section>`;
 
-function run(name, { reducedMotion = false } = {}) {
+function run(name, { reducedMotion = false, desktop = true } = {}) {
   console.log('\n' + name);
 
   const dom = new JSDOM(`<!DOCTYPE html><html lang="cs"><body>${PAGE}</body></html>`, {
@@ -107,7 +110,11 @@ function run(name, { reducedMotion = false } = {}) {
   /* jsdom nemá matchMedia — dosadíme minimální náhradu, ať se dá otestovat
      i větev s vypnutými animacemi. */
   window.matchMedia = (query) => ({
-    matches: query.includes('prefers-reduced-motion') ? reducedMotion : true,
+    matches: query.includes('prefers-reduced-motion')
+      ? reducedMotion
+      : query.includes('min-width')
+        ? desktop
+        : true,
     media: query,
     addEventListener() {},
     removeEventListener() {},
@@ -178,7 +185,30 @@ async function main() {
   ok('náhled se otevřel', doc.querySelector('[data-spanel]').style.opacity === '1');
 }
 
-// --- 2. vypnuté animace ---------------------------------------------------
+// --- 2. mobil: fotku u služeb otevírá scroll ------------------------------
+{
+  const win = run('MOBIL (bez hoveru)', { desktop: false });
+  const doc = win.document;
+
+  Object.defineProperty(win, 'innerHeight', { value: 800, configurable: true });
+  win.dispatchEvent(new win.Event('scroll'));
+  await frame();
+
+  const media = [...doc.querySelectorAll('[data-smedia]')];
+  const otevrene = media.filter((m) => m.style.height && m.style.height !== '0px');
+  ok('otevřený je právě jeden řádek', otevrene.length === 1);
+  ok('fotka otevřeného řádku je vidět',
+    otevrene.length === 1 && $img(otevrene[0]).style.opacity === '1');
+  ok('ostatní fotky zůstaly skryté',
+    media.filter((m) => m !== otevrene[0]).every((m) => !$img(m).style.opacity || $img(m).style.opacity === '0'));
+
+  /* Náhled u kurzoru se na mobilu nesmí otevřít. */
+  doc.querySelectorAll('[data-srow]')[1].dispatchEvent(new win.Event('mouseenter'));
+  const panel = doc.querySelector('[data-spanel]');
+  ok('náhled u kurzoru zůstal zavřený', panel.style.opacity !== '1');
+}
+
+// --- 3. vypnuté animace ---------------------------------------------------
 {
   const win = run('VYPNUTÉ ANIMACE (prefers-reduced-motion)', { reducedMotion: true });
   const doc = win.document;

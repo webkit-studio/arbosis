@@ -1,31 +1,46 @@
 /* ==========================================================================
-   Služby — náhled fotky, který sleduje kurzor
+   Služby — fotka u řádku
    --------------------------------------------------------------------------
-   Na počítači se u seznamu služeb ukáže fotka řádku pod kurzorem. Jedna
-   fotka na jeden řádek — obrázek se bere přímo z prvku ve Webflow
-   (.sluzby_photo uvnitř řádku), takže se ve Designeru vyměňuje jako každá
+   POČÍTAČ: náhled sleduje kurzor a ukazuje fotku řádku pod ním.
+   MOBIL A TABLET: kurzor neexistuje, takže fotku otevírá scroll — vždycky
+   jen u jednoho řádku, u toho nejblíž ke čtené části obrazovky.
+
+   Jedna fotka na jeden řádek. Obrázek se bere přímo z prvku ve Webflow
+   (.sluzby_photo uvnitř řádku), takže se v Designeru vyměňuje jako každá
    jiná fotka a skript se o nic nestará.
 
    PODHOUBÍ PRO STŘÍDÁNÍ: když řádek dostane atribut data-photos se seznamem
-   dalších URL oddělených čárkou, nákled je začne po PHOTO_INTERVAL střídat.
-   Bez atributu (dnešní stav) drží jednu fotku. Zapíná se tedy obsahem, ne
-   zásahem do kódu.
+   dalších URL oddělených čárkou, náhled je začne po PHOTO_INTERVAL střídat.
+   Bez atributu (dnešní stav) drží jednu fotku.
 
-   Na tabletu a mobilu se nic z toho nespouští — fotka je tam pod řádkem
-   natvrdo v layoutu (řídí Webflow) a kurzor neexistuje.
+   Proč to na mobilu nepřeskakuje:
+   1. Přepne se, až je jiný řádek blíž o SWITCH_MARGIN. Bez toho by stačil
+      pixel scrollu a otevřený řádek by se měnil sem a tam.
+   2. Zavírá se BEZ animace a se srovnáním scrollu, když je zavíraný řádek
+      nad viewportem. Jinak by se obsah pod prstem posunul o výšku fotky.
+   3. Poslední otevřený řádek zůstává otevřený, i když seznam odscrolluje
+      pryč — jinak by se stránka zkrátila a scroll uskočil.
    ========================================================================== */
 
 (function () {
-  if (!has(SEL.sluzbyList) || !has(SEL.sluzbyPanel)) return;
+  if (!has(SEL.sluzbyList)) return;
 
   var PHOTO_INTERVAL = 500;
   var DESKTOP_MIN = 992;
 
+  /* Kam v okně míří „čtená" linka. 0.4 = o kus nad středem, kde oko sedí. */
+  var FOCUS_LINE = 0.4;
+
+  /* O kolik pixelů musí být nový řádek blíž, aby se přepnulo. */
+  var SWITCH_MARGIN = 64;
+
+  /* Podíl výšky okna, který zabere otevřená fotka. */
+  var OPEN_RATIO = 0.42;
+
   function photosOf(row) {
     var list = [];
     var main = $1('img', $1(SEL.sluzbyMedia, row) || row);
-    if (main && main.currentSrc) list.push(main.currentSrc);
-    else if (main && main.src) list.push(main.src);
+    if (main) list.push(main.currentSrc || main.src);
 
     var extra = row.getAttribute('data-photos');
     if (extra) {
@@ -39,36 +54,37 @@
 
   onReady(function () {
     var list = $1(SEL.sluzbyList);
-    var panel = $1(SEL.sluzbyPanel);
-    var image = $1('img', panel);
     var rows = $$(SEL.sluzbyRow, list);
-    if (!image || !rows.length) return;
+    if (!rows.length) return;
 
     var desktop = window.matchMedia('(min-width: ' + DESKTOP_MIN + 'px)');
+
+    /* ---- náhled u kurzoru (počítač) ------------------------------------ */
+    var panel = $1(SEL.sluzbyPanel);
+    var panelImage = panel && $1('img', panel);
     var timer = null;
     var frames = [];
     var index = 0;
 
     function show() {
       var url = frames[index % frames.length];
-      if (url && image.getAttribute('src') !== url) image.setAttribute('src', url);
+      if (url && panelImage.getAttribute('src') !== url) panelImage.setAttribute('src', url);
     }
 
-    function stop() {
+    function stopRotation() {
       if (timer) {
         clearInterval(timer);
         timer = null;
       }
     }
 
-    function start(row) {
-      stop();
+    function startRotation(row) {
+      stopRotation();
       frames = photosOf(row);
       index = 0;
       if (!frames.length) return;
       show();
-      /* Střídání se pouští jen když je fotek víc — jinak by interval běžel
-         naprázdno a jen budil prohlížeč. */
+      /* Interval se pouští jen když je fotek víc — jinak by běžel naprázdno. */
       if (frames.length > 1 && ANIM) {
         timer = setInterval(function () {
           index += 1;
@@ -77,42 +93,141 @@
       }
     }
 
-    function active() {
+    function hoverActive() {
       return desktop.matches && ANIM;
     }
 
-    function open() {
-      panel.style.opacity = '1';
-      panel.style.transform = 'scale(1)';
-    }
-
-    function close() {
-      stop();
+    function closePanel() {
+      stopRotation();
+      if (!panel) return;
       panel.style.opacity = '0';
       panel.style.transform = 'scale(0.94)';
     }
 
-    list.addEventListener('mouseleave', close);
+    if (panel && panelImage) {
+      list.addEventListener('mouseleave', closePanel);
 
-    rows.forEach(function (row) {
-      row.addEventListener('mouseenter', function () {
-        if (!active()) return;
-        start(row);
-        open();
+      rows.forEach(function (row) {
+        row.addEventListener('mouseenter', function () {
+          if (!hoverActive()) return;
+          startRotation(row);
+          panel.style.opacity = '1';
+          panel.style.transform = 'scale(1)';
+        });
       });
-    });
 
-    list.addEventListener('mousemove', function (e) {
-      if (!active()) return;
-      var w = panel.offsetWidth;
-      var h = panel.offsetHeight;
-      panel.style.left = Math.max(8, Math.min(e.clientX - w / 2, window.innerWidth - w - 8)) + 'px';
-      panel.style.top = Math.max(8, Math.min(e.clientY - h / 2, window.innerHeight - h - 8)) + 'px';
-    });
+      list.addEventListener('mousemove', function (e) {
+        if (!hoverActive()) return;
+        var w = panel.offsetWidth;
+        var h = panel.offsetHeight;
+        panel.style.left = Math.max(8, Math.min(e.clientX - w / 2, window.innerWidth - w - 8)) + 'px';
+        panel.style.top = Math.max(8, Math.min(e.clientY - h / 2, window.innerHeight - h - 8)) + 'px';
+      });
+    }
 
-    /* Přepnutí na užší okno musí náhled schovat, jinak by zůstal viset. */
+    /* ---- otevírání scrollem (mobil a tablet) --------------------------- */
+    var open = null;
+
+    function mediaOf(row) {
+      return $1(SEL.sluzbyMedia, row);
+    }
+
+    function openHeight() {
+      return Math.round(window.innerHeight * OPEN_RATIO);
+    }
+
+    /** Zavře řádek. Když je nad viewportem, udělá to bez animace a o stejný
+        kus posune scroll — změna výšky tak zůstane pro oko neviditelná. */
+    function collapse(row) {
+      var media = mediaOf(row);
+      if (!media) return;
+
+      var above = row.getBoundingClientRect().bottom < 0;
+      var height = media.offsetHeight;
+
+      if (above) {
+        media.style.transition = 'none';
+        media.style.height = '0px';
+        window.scrollBy(0, -height);
+        /* Přechod se vrací až po dokreslení, jinak by ho prohlížeč sloučil. */
+        requestAnimationFrame(function () {
+          media.style.transition = '';
+        });
+      } else {
+        media.style.height = '0px';
+      }
+
+      var photo = $1('img', media);
+      if (photo) photo.style.opacity = '0';
+    }
+
+    function expand(row) {
+      var media = mediaOf(row);
+      if (!media) return;
+      media.style.height = openHeight() + 'px';
+      var photo = $1('img', media);
+      if (photo) photo.style.opacity = '1';
+    }
+
+    /** Řádek nejblíž čtené lince, s hysterezí proti přeblikávání. */
+    function pick() {
+      var line = window.innerHeight * FOCUS_LINE;
+      var best = null;
+      var bestDistance = Infinity;
+
+      rows.forEach(function (row) {
+        var title = $1('h3', row) || row;
+        var rect = title.getBoundingClientRect();
+        var distance = Math.abs(rect.top + rect.height / 2 - line);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = row;
+        }
+      });
+
+      if (!best || best === open) return open;
+      if (!open) return best;
+
+      var openTitle = $1('h3', open) || open;
+      var openRect = openTitle.getBoundingClientRect();
+      var openDistance = Math.abs(openRect.top + openRect.height / 2 - line);
+
+      /* Zůstává otevřený, dokud není jiný řádek zřetelně blíž. */
+      return bestDistance < openDistance - SWITCH_MARGIN ? best : open;
+    }
+
+    function sync() {
+      if (desktop.matches) return;
+
+      var next = pick();
+      if (!next || next === open) return;
+
+      if (open) collapse(open);
+      open = next;
+      expand(open);
+    }
+
+    function reset() {
+      rows.forEach(function (row) {
+        var media = mediaOf(row);
+        if (!media) return;
+        media.style.transition = 'none';
+        media.style.height = '';
+        var photo = $1('img', media);
+        if (photo) photo.style.opacity = '';
+        requestAnimationFrame(function () {
+          media.style.transition = '';
+        });
+      });
+      open = null;
+    }
+
+    onScroll(sync);
+
     var onChange = function () {
-      if (!desktop.matches) close();
+      closePanel();
+      reset();
+      sync();
     };
     if (desktop.addEventListener) desktop.addEventListener('change', onChange);
     else if (desktop.addListener) desktop.addListener(onChange);
