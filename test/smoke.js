@@ -86,7 +86,10 @@ const PAGE = `
   <span class="postup_step" data-pstep>04</span>
 </section>
 
-<section id="reference"><div data-rv="0">Reference</div></section>
+<section id="reference">
+  <div data-rv="0">Reference</div>
+  <blockquote class="reference_quote" data-quote>„Velká část zahrady je v příkrém svahu, pomohli nám ji zpevnit a osázet.“</blockquote>
+</section>
 
 <section id="kontakt">
   <div data-glow><div></div></div>
@@ -268,7 +271,37 @@ async function main() {
   ok('poctivé odeslání projde', ev.defaultPrevented === false);
 }
 
-// --- 4. cookie lišta ------------------------------------------------------
+// --- 4. citace v referencích se vybarvuje ----------------------------------
+{
+  const win = run('CITACE V REFERENCÍCH');
+  const doc = win.document;
+  const quote = doc.querySelector('[data-quote]');
+  const words = quote.querySelectorAll('.quote_w');
+
+  ok('citace je rozdělená na slova', words.length === 13);
+  ok('text citace zůstal nezměněný',
+    quote.textContent.trim() === '„Velká část zahrady je v příkrém svahu, pomohli nám ji zpevnit a osázet.“');
+
+  /* jsdom nepočítá layout, takže getBoundingClientRect vrací samé nuly
+     a citace by vyšla jako dávno projetá. Dosadíme polohu v půlce dráhy. */
+  Object.defineProperty(win, 'innerHeight', { value: 800, configurable: true });
+  quote.getBoundingClientRect = () => ({ top: 500, bottom: 700, height: 200, left: 0, right: 0, width: 600 });
+  win.dispatchEvent(new win.Event('scroll'));
+  await frame();
+  const prvni = words[0].style.color;
+  const posledni = words[words.length - 1].style.color;
+  ok('barva se každému slovu nastavila', prvni !== '' && posledni !== '');
+  ok('první slovo je tmavší než poslední', prvni !== posledni);
+
+  /* Dojetá citace má všechna slova na plné barvě. */
+  quote.getBoundingClientRect = () => ({ top: -400, bottom: -200, height: 200, left: 0, right: 0, width: 600 });
+  win.dispatchEvent(new win.Event('scroll'));
+  await frame();
+  ok('po dojetí jsou všechna slova stejně tmavá',
+    [...words].every((w) => w.style.color === words[0].style.color));
+}
+
+// --- 5. cookie lišta ------------------------------------------------------
 {
   const win = run('COOKIE LIŠTA');
   const doc = win.document;
@@ -299,7 +332,7 @@ async function main() {
     (win.dataLayer || []).some((e) => e && e.event === 'cookie_consent' && e.consent_analytics === 'granted'));
 }
 
-// --- 5. vypnuté animace ---------------------------------------------------
+// --- 6. vypnuté animace ---------------------------------------------------
 {
   const win = run('VYPNUTÉ ANIMACE (prefers-reduced-motion)', { reducedMotion: true });
   const doc = win.document;
