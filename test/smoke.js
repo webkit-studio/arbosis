@@ -96,7 +96,7 @@ const PAGE = `
   </details>
 </section>`;
 
-function run(name, { reducedMotion = false, desktop = true } = {}) {
+function run(name, { reducedMotion = false, desktop = true, seed = null } = {}) {
   console.log('\n' + name);
 
   const dom = new JSDOM(`<!DOCTYPE html><html lang="cs"><body>${PAGE}</body></html>`, {
@@ -128,6 +128,10 @@ function run(name, { reducedMotion = false, desktop = true } = {}) {
 
   const errors = [];
   window.addEventListener('error', (e) => errors.push(e.message));
+
+  /* Stav uložený v prohlížeči ještě před spuštěním bundlu — cookie lišta
+     se podle něj rozhoduje, jestli se vůbec vykreslí. */
+  if (seed) seed(window);
 
   try {
     window.eval(bundle);
@@ -208,7 +212,38 @@ async function main() {
   ok('náhled u kurzoru zůstal zavřený', panel.style.opacity !== '1');
 }
 
-// --- 3. vypnuté animace ---------------------------------------------------
+// --- 3. cookie lišta ------------------------------------------------------
+{
+  const win = run('COOKIE LIŠTA');
+  const doc = win.document;
+  win.dataLayer = [];
+
+  const bar = doc.querySelector('[data-cc-bar]');
+  ok('lišta se ukázala, když souhlas chybí', bar !== null);
+  ok('výchozí stav přepínače je vypnuto',
+    doc.querySelector('[data-cc-toggle]').getAttribute('aria-checked') === 'false');
+
+  doc.querySelector('[data-cc-settings]').dispatchEvent(new win.Event('click', { bubbles: true, cancelable: true }));
+  ok('nastavení je schované za klikem', doc.querySelector('[data-cc-panel]').classList.contains('is-open'));
+
+  doc.querySelector('[data-cc-reject]').dispatchEvent(new win.Event('click', { bubbles: true, cancelable: true }));
+  ok('odmítnutí poslalo consent denied',
+    win.dataLayer.some((e) => e && e.event === 'cookie_consent' && e.consent_analytics === 'denied'));
+  ok('volba se uložila do prohlížeče',
+    JSON.parse(win.localStorage.getItem('arbosis_cc')).analytics === false);
+}
+
+{
+  const win = run('COOKIE LIŠTA — souhlas už padl', {
+    seed: (w) => w.localStorage.setItem('arbosis_cc',
+      JSON.stringify({ v: 1, analytics: true, ts: Date.now() }))
+  });
+  ok('lišta se podruhé neukázala', win.document.querySelector('[data-cc-bar]') === null);
+  ok('souhlas se obnovil do dataLayeru',
+    (win.dataLayer || []).some((e) => e && e.event === 'cookie_consent' && e.consent_analytics === 'granted'));
+}
+
+// --- 4. vypnuté animace ---------------------------------------------------
 {
   const win = run('VYPNUTÉ ANIMACE (prefers-reduced-motion)', { reducedMotion: true });
   const doc = win.document;
