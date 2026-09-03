@@ -1,0 +1,17 @@
+{
+  "name": "arbosis",
+  "version": "1.0.0",
+  "description": "Vlastní kód webu arbosis.cz — modulární zdroj v src/, sloučený bundle v dist/",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node test/smoke.js",
+    "lint": "npx eslint src/modules build.js test",
+    "check": "npm run build && npm run test && npm run lint"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "jsdom": "^24.1.3"
+  }
+}
