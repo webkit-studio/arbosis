@@ -76,35 +76,28 @@ function ccSave(analytics) {
 
 var CC_HTML =
   '<div class="cc_bar" data-cc-bar role="dialog" aria-live="polite" aria-label="Souhlas s cookies">' +
-  '<div class="cc_inner">' +
-  '<div class="cc_text">' +
-  '<strong class="cc_title">Měříme návštěvnost webu</strong>' +
-  '<p class="cc_desc">Zajímá nás jen souhrnně, které sekce lidi zaujmou. Bez vašeho souhlasu se neuloží nic a web funguje úplně stejně. Podrobnosti jsou v <a href="/ochrana-osobnich-udaju" class="cc_link">zásadách ochrany osobních údajů</a>.</p>' +
-  '</div>' +
+  '<p class="cc_desc">M\u011b\u0159\u00edme n\u00e1v\u0161t\u011bvnost webu, abychom v\u011bd\u011bli, kter\u00e9 sekce lidi zaj\u00edmaj\u00ed. Bez souhlasu se neulo\u017e\u00ed nic. <a href="/ochrana-osobnich-udaju" class="cc_link">Podrobnosti</a></p>' +
   '<div class="cc_actions">' +
-  '<a href="#" class="cc_ghost" data-cc-settings role="button">Nastavení</a>' +
-  '<a href="#" class="cc_btn cc_btn-outline" data-cc-reject role="button">Jen nezbytné</a>' +
-  '<a href="#" class="cc_btn" data-cc-accept role="button">Přijmout vše</a>' +
+  '<a href="#" class="cc_btn" data-cc-accept role="button">P\u0159ijmout</a>' +
+  '<a href="#" class="cc_quiet" data-cc-reject role="button">Jen nezbytn\u00e9</a>' +
+  '<a href="#" class="cc_quiet" data-cc-settings role="button">Nastaven\u00ed</a>' +
   '</div>' +
   '</div>' +
-  '</div>' +
-  '<div class="cc_panel" data-cc-panel role="dialog" aria-modal="true" aria-label="Nastavení cookies">' +
-  '<div class="cc_panel-inner">' +
-  '<strong class="cc_panel-title">Nastavení cookies</strong>' +
+  '<div class="cc_panel" data-cc-panel role="dialog" aria-modal="true" aria-label="Nastaven\u00ed cookies">' +
+  '<div class="cc_panel-title">Co se m\u011b\u0159\u00ed</div>' +
   '<div class="cc_cat">' +
-  '<div class="cc_cat-head"><strong class="cc_cat-name">Nezbytné</strong><span class="cc_always">Vždy zapnuto</span></div>' +
-  '<p class="cc_cat-desc">Drží web pohromadě — odeslání formuláře a zapamatování téhle volby. Bez nich web nefunguje, proto se na ně ptát nemusíme.</p>' +
+  '<div class="cc_cat-head"><span class="cc_cat-name">Nezbytn\u00e9</span><span class="cc_always">v\u017edy zapnuto</span></div>' +
+  '<p class="cc_cat-desc">Odesl\u00e1n\u00ed formul\u00e1\u0159e a zapamatov\u00e1n\u00ed t\u00e9hle volby. Bez nich web nefunguje.</p>' +
   '</div>' +
   '<div class="cc_cat">' +
-  '<div class="cc_cat-head"><strong class="cc_cat-name">Analytické</strong>' +
+  '<div class="cc_cat-head"><span class="cc_cat-name">Analytick\u00e9</span>' +
   '<a href="#" class="cc_switch" data-cc-toggle role="switch" aria-checked="false"><span class="cc_knob"></span></a>' +
   '</div>' +
-  '<p class="cc_cat-desc">Google Analytics. Ukazuje, kolik lidí web navštívilo a odkud přišli. Nesbírá nic, podle čeho by šlo poznat konkrétního člověka.</p>' +
+  '<p class="cc_cat-desc">Google Analytics. Souhrnn\u011b: kolik lid\u00ed p\u0159i\u0161lo a odkud. Nic, pod\u013ee \u010deho by \u0161lo poznat konkr\u00e9tn\u00edho \u010dlov\u011bka.</p>' +
   '</div>' +
   '<div class="cc_panel-actions">' +
-  '<a href="#" class="cc_btn cc_btn-outline" data-cc-save role="button">Uložit volbu</a>' +
-  '<a href="#" class="cc_btn" data-cc-accept role="button">Přijmout vše</a>' +
-  '</div>' +
+  '<a href="#" class="cc_btn" data-cc-save role="button">Ulo\u017eit volbu</a>' +
+  '<a href="#" class="cc_quiet" data-cc-accept role="button">P\u0159ijmout v\u0161e</a>' +
   '</div>' +
   '</div>';
 

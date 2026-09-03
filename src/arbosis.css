@@ -206,38 +206,37 @@ summary:focus-visible,
 /* --- Cookie lišta --------------------------------------------------------
    Markup se vykresluje z JS (viz src/modules/80-cookies.js), takže třídy
    .cc_* ve Webflow neexistují a nedá se na ně v Designeru kliknout. Vzhled
-   proto výjimečně patří sem. Pozice fixed a dojezd zespoda by stejně byly
-   custom — Webflow neumí ani přechod navázaný na třídu přidanou z kódu. */
+   proto výjimečně patří sem.
+
+   Záměrně to nevypadá jako lišta. Tmavý pruh přes celou šířku působí jako
+   nalepený nástroj na souhlas a rozbíjí vzdušnost zbytku webu. Tohle je
+   světlá karta vlevo dole na šířku textu, průsvitná s rozostřeným pozadím,
+   jedno plné tlačítko a zbytek tiché odkazy. */
 
 .cc {
   position: fixed;
   z-index: 9999;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  padding: 16px;
+  bottom: 24px;
+  left: 24px;
+  width: calc(100% - 48px);
+  max-width: 27rem;
   pointer-events: none;
 }
 
 .cc_bar,
 .cc_panel {
   pointer-events: auto;
-  max-width: 720px;
-  margin: 0 auto;
-  border: 1px solid rgba(245, 242, 236, 0.14);
-  border-radius: 10px;
-  background-color: var(--les, #1b3a2d);
-  box-shadow: 0 18px 48px rgba(15, 30, 22, 0.28);
-  color: var(--kost, #f5f2ec);
-}
-
-/* Dojezd zespoda. Výchozí stav je posunutý dolů, třídu .is-ready přidá JS
-   až po prvním snímku, aby přechod naběhl místo skoku. */
-.cc_bar,
-.cc_panel {
-  transform: translateY(24px);
+  padding: 22px 24px;
+  border: 1px solid var(--border-hairline, #d9d2c4);
+  border-radius: 14px;
+  background-color: rgba(245, 242, 236, 0.94);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 60px rgba(27, 58, 45, 0.16);
+  color: var(--text-body, #2a3b32);
+  transform: translateY(14px);
   opacity: 0;
-  transition: transform 260ms cubic-bezier(0.2, 0, 0, 1), opacity 260ms cubic-bezier(0.2, 0, 0, 1);
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cc.is-ready .cc_bar {
@@ -247,7 +246,7 @@ summary:focus-visible,
 
 .cc.is-gone .cc_bar,
 .cc.is-gone .cc_panel {
-  transform: translateY(24px);
+  transform: translateY(14px);
   opacity: 0;
 }
 
@@ -265,47 +264,35 @@ summary:focus-visible,
   opacity: 1;
 }
 
-.cc_inner {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 20px 24px;
-}
-
-.cc_title {
-  display: block;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--kost, #f5f2ec);
-}
-
 .cc_desc {
-  margin: 6px 0 0 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: rgba(245, 242, 236, 0.74);
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-muted, #5e7368);
 }
 
 .cc_link {
-  color: var(--signal-soft, #ffb199);
+  color: var(--signal-cta, #c4491f);
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .cc_actions {
   display: flex;
-  flex: none;
   align-items: center;
-  gap: 10px;
+  gap: 18px;
+  margin-top: 18px;
 }
 
+/* Pilulka místo hranatého tlačítka — sedí k zaoblení karty a nepůsobí
+   jako systémový dialog. */
 .cc_btn {
   display: inline-flex;
-  height: 40px;
-  padding: 0 18px;
+  height: 38px;
+  padding: 0 20px;
   align-items: center;
   justify-content: center;
-  border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 999px;
   background-color: var(--signal-cta, #c4491f);
   color: #fff;
   font-size: 15px;
@@ -314,52 +301,40 @@ summary:focus-visible,
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1), border-color 200ms cubic-bezier(0.2, 0, 0, 1);
+  transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .cc_btn:hover {
   background-color: var(--signal-cta-hover, #a83e1a);
 }
 
-.cc_btn-outline {
-  background-color: transparent;
-  border-color: rgba(245, 242, 236, 0.34);
-  color: var(--kost, #f5f2ec);
-}
-
-.cc_btn-outline:hover {
-  background-color: rgba(245, 242, 236, 0.08);
-  border-color: rgba(245, 242, 236, 0.6);
-}
-
-.cc_ghost {
-  font-size: 14px;
-  color: rgba(245, 242, 236, 0.7);
-  text-decoration: underline;
+/* Odmítnutí je stejně dostupné jako souhlas, jen tišší. Schované odmítnutí
+   je přesně to, za co ÚOOÚ pokutuje. */
+.cc_quiet {
+  font-size: 15px;
+  color: var(--text-muted, #5e7368);
+  text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
+  transition: color 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-.cc_ghost:hover {
-  color: var(--kost, #f5f2ec);
-}
-
-.cc_panel-inner {
-  padding: 24px;
-  max-height: 70vh;
-  overflow-y: auto;
+.cc_quiet:hover {
+  color: var(--les, #1b3a2d);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .cc_panel-title {
-  display: block;
-  font-size: 18px;
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-step, #6f7d6c);
 }
 
 .cc_cat {
   margin-top: 20px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(245, 242, 236, 0.14);
 }
 
 .cc_cat-head {
@@ -370,34 +345,33 @@ summary:focus-visible,
 }
 
 .cc_cat-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
+  color: var(--les, #1b3a2d);
 }
 
 .cc_always {
   font-size: 13px;
-  color: rgba(245, 242, 236, 0.5);
+  color: var(--text-step, #6f7d6c);
 }
 
 .cc_cat-desc {
-  margin: 8px 0 0 0;
+  margin: 6px 0 0 0;
   font-size: 14px;
-  line-height: 1.55;
-  color: rgba(245, 242, 236, 0.72);
+  line-height: 1.6;
+  color: var(--text-muted, #5e7368);
 }
 
-/* Přepínač. Webflow prvek Checkbox by musel být uvnitř formuláře a nese
-   s sebou vlastní markup, tohle je jen odkaz s aria-checked. */
 .cc_switch {
   position: relative;
   display: block;
   flex: none;
-  width: 44px;
-  height: 26px;
+  width: 42px;
+  height: 24px;
   border-radius: 999px;
-  background-color: rgba(245, 242, 236, 0.2);
+  background-color: rgba(42, 59, 50, 0.16);
   cursor: pointer;
-  transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1);
+  transition: background-color 220ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .cc_switch.is-on {
@@ -408,11 +382,12 @@ summary:focus-visible,
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
   background-color: #fff;
-  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+  box-shadow: 0 1px 3px rgba(27, 58, 45, 0.24);
+  transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .cc_switch.is-on .cc_knob {
@@ -421,39 +396,33 @@ summary:focus-visible,
 
 .cc_panel-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 24px;
+  align-items: center;
+  gap: 18px;
+  margin-top: 26px;
   padding-top: 20px;
-  border-top: 1px solid rgba(245, 242, 236, 0.14);
+  border-top: 1px solid var(--border-hairline, #d9d2c4);
 }
 
 @media (max-width: 767px) {
   .cc {
-    padding: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: calc(100% - 24px);
+    max-width: none;
   }
 
-  .cc_inner {
-    display: block;
-    padding: 18px 20px;
+  .cc_bar,
+  .cc_panel {
+    padding: 20px;
   }
 
   .cc_actions {
-    margin-top: 16px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    gap: 16px;
   }
 
-  .cc_ghost {
-    margin-right: auto;
-  }
-
-  .cc_btn {
-    flex: 1 1 auto;
-  }
-
-  .cc_panel-inner {
-    max-height: 76vh;
+  .cc_panel {
+    max-height: 78vh;
+    overflow-y: auto;
   }
 }
 
