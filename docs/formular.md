@@ -62,52 +62,62 @@ Název pole `E-mail` je čistě ASCII, takže projde.
 ### Email template
 
 Tělo zprávy. Použitelné proměnné: `siteName`, `formName`, `formData`
-a `formDashboardUrl`. `{{formData}}` vyrenderuje tabulku všech vyplněných
-polí, takže se sem nevypisují jednotlivě — přibude-li do formuláře pole,
-objeví se v e-mailu samo.
+a `formDashboardUrl`.
+
+**Jednotlivá pole se v těle použít nedají.** `{{ Jméno a příjmení }}`
+funguje jen v poli Reply to; v šabloně se vypíše jako holý text.
+`{{formData}}` vyrenderuje celou tabulku polí najednou a Webflow si ji
+stylizuje po svém — na hierarchii „šedý popisek nahoře, hodnota pod ním
+větší a černá" tedy uvnitř Webflow nedosáhneme. Blok `<style>` v šabloně
+je sázka na to, že Webflow sází názvy polí do `<strong>`: když ano,
+hierarchie naskočí sama, když ne, zůstane výchozí vzhled a nic se
+nerozbije. Plnou kontrolu nad vzhledem dá až přesun e-mailů do Resendu,
+viz `docs/potvrzovaci-email.md`.
+
+`{{formDashboardUrl}}` v odeslané zprávě nikam nevedl, proto je v tlačítku
+natvrdo adresa seznamu odeslání.
 
 E-mailoví klienti neumí externí CSS ani flexbox, proto je šablona postavená
 na tabulkách a stylech psaných rovnou u prvků. Vypadá stejně v Gmailu,
 v Outlooku i na telefonu.
 
 ```html
+<style>
+  /* Sázka na markup, který Webflow generuje pro {{formData}}: pokud jsou
+     názvy polí v <strong>, udělá z nich tohle šedý popisek nad hodnotou. */
+  .wf-data strong {
+    display: block;
+    margin: 22px 0 2px 0;
+    color: #8a9891;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .wf-data p, .wf-data div, .wf-data td { padding: 0; }
+</style>
+
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f2ec;padding:24px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
   <tr>
     <td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background-color:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #d9d2c4;">
 
         <tr>
-          <td style="background-color:#1b3a2d;padding:24px 28px;">
+          <td style="background-color:#1b3a2d;padding:26px 28px 28px 28px;">
             <div style="color:#ffb199;font-size:12px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;">Nová poptávka</div>
-            <div style="color:#f5f2ec;font-size:22px;font-weight:600;padding-top:6px;">Někdo chce zahradu</div>
-            <div style="color:rgba(245,242,236,0.6);font-size:13px;padding-top:8px;">Přišlo z formuláře {{formName}} na webu {{siteName}}.</div>
+            <div style="color:#f5f2ec;font-size:22px;font-weight:600;line-height:1.3;padding-top:10px;">Někdo právě vyplnil formulář na webu Arbosis.</div>
           </td>
         </tr>
 
         <tr>
-          <td style="padding:24px 28px 8px 28px;color:#2a3b32;font-size:15px;line-height:1.6;">
+          <td class="wf-data" style="padding:10px 28px 26px 28px;color:#1b1b1b;font-size:17px;line-height:1.5;">
             {{formData}}
           </td>
         </tr>
 
         <tr>
-          <td style="padding:8px 28px 24px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ede8de;border-radius:8px;">
-              <tr>
-                <td style="padding:16px 18px;color:#2a3b32;font-size:14px;line-height:1.6;">
-                  <strong style="color:#1b3a2d;">Co teď</strong><br>
-                  1. Odpovědět do 24 hodin — na tuhle zprávu stačí dát Odpovědět, míří rovnou zákazníkovi.<br>
-                  2. Najít adresu na mapách a odhadnout rozsah.<br>
-                  3. Domluvit schůzku na místě.
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <tr>
           <td style="padding:0 28px 28px 28px;">
-            <a href="{{formDashboardUrl}}" style="display:inline-block;background-color:#c4491f;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 22px;border-radius:6px;">Otevřít všechny poptávky</a>
+            <a href="https://webflow.com/dashboard/sites/arbosis/forms/submissions?name=Popt%C3%A1vka%20zahrady" style="display:inline-block;background-color:#c4491f;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 22px;border-radius:6px;">Otevřít všechny poptávky</a>
           </td>
         </tr>
 
@@ -123,6 +133,14 @@ v Outlooku i na telefonu.
   </tr>
 </table>
 ```
+
+### Past na boty se do e-mailu nedostane
+
+Formulář má skryté pole `Website` (past na roboty, viz
+`src/modules/85-antispam.js`). Protože do těla e-mailu jde jen `{{formData}}`,
+objevovala by se past v každé poptávce jako prázdný řádek. Skript jí proto
+těsně před odesláním sebere atribut `name` — prohlížeč pole bez názvu
+neodešle. Když je past vyplněná, odeslání se zastaví a název se vrátí.
 
 ### Název formuláře
 
