@@ -1,7 +1,7 @@
 /*!
  * Arbosis — sloučený skript webu arbosis.cz
  * Sestaveno z src/modules/ — needituj tento soubor, uprav zdroj a spusť `node build.js`.
- * Moduly: 00-core.js, 10-nav.js, 20-hero.js, 30-sluzby.js, 40-postup.js, 50-faq.js, 60-reveal.js, 65-quote.js, 70-glow.js, 80-cookies.js, 85-antispam.js, 90-gtm.js
+ * Moduly: 00-core.js, 10-nav.js, 20-hero.js, 30-sluzby.js, 40-postup.js, 50-faq.js, 60-reveal.js, 65-quote.js, 70-e404.js, 70-glow.js, 80-cookies.js, 85-antispam.js, 90-gtm.js
  */
 (function () {
 'use strict';
@@ -59,6 +59,8 @@ var SEL = {
   reveal: '[data-rv]',
   glow: '[data-glow]',
   quote: '[data-quote]',
+  /* symbol v rohu stránky 404, viz 70-e404.js */
+  e404Symbol: '[data-e404sym]',
   form: '#form-poptavka',
 
   /* měření — hook atribut data-gtm, viz 90-gtm.js */
@@ -887,6 +889,81 @@ var QUOTE_FADE = 0.16;
 })();
 
 /* ==========================================================================
+   Symbol na stránce 404 reaguje na kurzor
+   --------------------------------------------------------------------------
+   PROČ NE VE WEBFLOW. Interakce se váže na pozici kurzoru kdekoliv na
+   stránce a přepočítává posun i světlost symbolu. IX2 umí „mouse move over
+   element", ale symbol má pointer-events: none (nesmí brát kliknutí) a leze
+   mimo viewport, takže by se najíždění chytalo jen na jeho viditelném rohu.
+   Navíc IX2 přes API nejde ani přečíst, natož zapsat.
+
+   CO TO DĚLÁ. Strom se za kurzorem naklání, a čím je kurzor blíž pravému
+   spodnímu rohu, tím je vidět víc. Návštěvník, který přišel na chybu, má
+   aspoň co osahat, než klikne zpátky.
+
+   Vypnuté animace i dotykové ovládání interakci přeskočí — na telefonu není
+   kurzor, který by ji spustil, a symbol zůstane v základní poloze.
+   ========================================================================== */
+
+var E404_SHIFT = 34; /* px, maximální posun symbolu */
+var E404_TILT = 2.4; /* deg, maximální naklonění */
+var E404_DIM = 0.07; /* výchozí světlost, drží ji i .e404_symbol */
+var E404_LIT = 0.2; /* světlost, když je kurzor u symbolu */
+
+(function () {
+  onReady(function () {
+    var wrap = $1(SEL.e404Symbol);
+    if (!wrap || !ANIM) return;
+
+    var img = $1('img', wrap);
+    if (!img) return;
+
+    /* Dotykové ovládání nemá kurzor, kterým by se dalo mířit. */
+    if (!window.matchMedia || !window.matchMedia('(hover: hover)').matches) return;
+
+    var px = 0;
+    var py = 0;
+    var queued = false;
+
+    function paint() {
+      queued = false;
+
+      var w = window.innerWidth || 1;
+      var h = window.innerHeight || 1;
+
+      /* -1 vlevo nahoře, +1 vpravo dole. */
+      var x = (px / w) * 2 - 1;
+      var y = (py / h) * 2 - 1;
+
+      wrap.style.transform =
+        'translate3d(' + (-x * E404_SHIFT).toFixed(1) + 'px,' +
+        (-y * E404_SHIFT).toFixed(1) + 'px,0) rotate(' +
+        (x * E404_TILT).toFixed(2) + 'deg)';
+
+      /* Vzdálenost kurzoru od pravého spodního rohu, kde symbol sedí.
+         0 = kurzor je v rohu, 1 = je nejdál, co jde. */
+      var dx = 1 - px / w;
+      var dy = 1 - py / h;
+      var far = Math.min(1, Math.sqrt(dx * dx + dy * dy));
+
+      img.style.opacity = (E404_DIM + (E404_LIT - E404_DIM) * (1 - far)).toFixed(3);
+    }
+
+    window.addEventListener(
+      'pointermove',
+      function (event) {
+        px = event.clientX;
+        py = event.clientY;
+        if (queued) return;
+        queued = true;
+        window.requestAnimationFrame(paint);
+      },
+      { passive: true }
+    );
+  });
+})();
+
+/* ==========================================================================
    Kontakt — světlo, které jde za kurzorem
    --------------------------------------------------------------------------
    Za formulářem se v tmavé sekci pohybuje měkké zelené světlo. Poloha se
@@ -1171,9 +1248,20 @@ var CC_HTML =
 
    Zachycené odeslání se do GA4 neposílá — konverze se počítá až na
    .w-form-done (viz 90-gtm.js), a ta se v tomhle případě nikdy neukáže.
+
+   PROČ SE PASTI PŘED ODESLÁNÍM BERE NÁZEV. Webflow posílá do notifikačního
+   e-mailu tabulku všech polí formuláře a v těle se dá použít jenom
+   {{formData}} — jednotlivá pole ne. Past by se tak Šimonovi objevila
+   v každé poptávce jako prázdný řádek „Website“. Prohlížeč do odeslání
+   nezahrne pole bez atributu name, takže se past těsně před serializací
+   odjmenuje. Čte se ještě předtím, past tím nepřestane fungovat.
+
+   Bez JS se past odešle prázdná a v e-mailu zůstane prázdný řádek. Je to
+   kosmetika, ne chyba — poptávka dojde celá.
    ========================================================================== */
 
 var HP_FIELD = 'input[name="Website"]';
+var HP_NAME = 'Website';
 var MIN_TIME = 3000;
 
 (function () {
@@ -1182,6 +1270,9 @@ var MIN_TIME = 3000;
     if (!form) return;
 
     var loaded = Date.now();
+    /* Odkaz se drží z načtení stránky: po odjmenování už past přes
+       [name="Website"] nenajdeme. */
+    var trap = $1(HP_FIELD, form);
 
     /* Capture fáze: posluchač na stejném prvku v capture běží dřív než ten,
        kterým si Webflow obsluhuje odeslání. stopImmediatePropagation ho pak
@@ -1189,10 +1280,15 @@ var MIN_TIME = 3000;
     form.addEventListener(
       'submit',
       function (event) {
-        var trap = $1(HP_FIELD, form);
         var trapped = !!trap && trap.value.trim() !== '';
         var tooFast = Date.now() - loaded < MIN_TIME;
+
+        /* Poptávka od člověka: past je prázdná a do e-mailu nemá co přidat. */
+        if (!trapped && trap) trap.removeAttribute('name');
         if (!trapped && !tooFast) return;
+
+        /* Odeslání neprojde, past se vrací zpátky pro další pokus. */
+        if (trap) trap.setAttribute('name', HP_NAME);
 
         event.preventDefault();
         event.stopImmediatePropagation();

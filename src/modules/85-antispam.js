@@ -22,9 +22,20 @@
 
    Zachycené odeslání se do GA4 neposílá — konverze se počítá až na
    .w-form-done (viz 90-gtm.js), a ta se v tomhle případě nikdy neukáže.
+
+   PROČ SE PASTI PŘED ODESLÁNÍM BERE NÁZEV. Webflow posílá do notifikačního
+   e-mailu tabulku všech polí formuláře a v těle se dá použít jenom
+   {{formData}} — jednotlivá pole ne. Past by se tak Šimonovi objevila
+   v každé poptávce jako prázdný řádek „Website“. Prohlížeč do odeslání
+   nezahrne pole bez atributu name, takže se past těsně před serializací
+   odjmenuje. Čte se ještě předtím, past tím nepřestane fungovat.
+
+   Bez JS se past odešle prázdná a v e-mailu zůstane prázdný řádek. Je to
+   kosmetika, ne chyba — poptávka dojde celá.
    ========================================================================== */
 
 var HP_FIELD = 'input[name="Website"]';
+var HP_NAME = 'Website';
 var MIN_TIME = 3000;
 
 (function () {
@@ -33,6 +44,9 @@ var MIN_TIME = 3000;
     if (!form) return;
 
     var loaded = Date.now();
+    /* Odkaz se drží z načtení stránky: po odjmenování už past přes
+       [name="Website"] nenajdeme. */
+    var trap = $1(HP_FIELD, form);
 
     /* Capture fáze: posluchač na stejném prvku v capture běží dřív než ten,
        kterým si Webflow obsluhuje odeslání. stopImmediatePropagation ho pak
@@ -40,10 +54,15 @@ var MIN_TIME = 3000;
     form.addEventListener(
       'submit',
       function (event) {
-        var trap = $1(HP_FIELD, form);
         var trapped = !!trap && trap.value.trim() !== '';
         var tooFast = Date.now() - loaded < MIN_TIME;
+
+        /* Poptávka od člověka: past je prázdná a do e-mailu nemá co přidat. */
+        if (!trapped && trap) trap.removeAttribute('name');
         if (!trapped && !tooFast) return;
+
+        /* Odeslání neprojde, past se vrací zpátky pro další pokus. */
+        if (trap) trap.setAttribute('name', HP_NAME);
 
         event.preventDefault();
         event.stopImmediatePropagation();

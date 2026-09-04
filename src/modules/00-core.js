@@ -51,6 +51,8 @@ var SEL = {
   reveal: '[data-rv]',
   glow: '[data-glow]',
   quote: '[data-quote]',
+  /* symbol v rohu stránky 404, viz 70-e404.js */
+  e404Symbol: '[data-e404sym]',
   form: '#form-poptavka',
 
   /* měření — hook atribut data-gtm, viz 90-gtm.js */

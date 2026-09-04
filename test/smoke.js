@@ -96,7 +96,7 @@ const PAGE = `
   <div data-fwrap>
     <div data-ring></div><div data-ring-b></div>
     <div class="w-form">
-      <form id="form-poptavka"><input name="E-mail"><div class="form_hp"><input name="Website"></div><button type="submit">Odeslat</button></form>
+      <form id="form-poptavka"><input name="E-mail"><div class="form_hp"><input id="f-web" name="Website" tabindex="-1" autocomplete="off"></div><button type="submit">Odeslat</button></form>
       <div class="w-form-done" style="display:none">Děkujeme</div>
       <div class="w-form-fail" style="display:none">Chyba</div>
     </div>
@@ -114,7 +114,9 @@ const PAGE = `
     <summary class="faq_question"><h3 class="faq_title">Kam jezdíte?</h3><span class="faq_icon">+</span></summary>
     <div class="faq_answer"><p class="faq_text">Odpověď</p></div>
   </details>
-</section>`;
+</section>
+
+<div class="e404_symbol-wrap" data-e404sym><img src="symbol.svg" alt=""></div>`;
 
 function run(name, { reducedMotion = false, desktop = true, seed = null } = {}) {
   console.log('\n' + name);
@@ -252,14 +254,19 @@ async function main() {
   const doc = win.document;
   const form = doc.querySelector('#form-poptavka');
 
+  /* Odkaz si držíme, protože poctivé odeslání past odjmenuje. */
+  const trap = doc.querySelector('#f-web');
+
   /* Robot vyplnil past. */
-  doc.querySelector('[name="Website"]').value = 'http://spam.example';
+  trap.value = 'http://spam.example';
   let ev = new win.Event('submit', { bubbles: true, cancelable: true });
   form.dispatchEvent(ev);
   ok('vyplněná past odeslání zastaví', ev.defaultPrevented === true);
 
+  ok('zablokovaná past si nechává název', trap.getAttribute('name') === 'Website');
+
   /* Prázdná past, ale odesláno hned po načtení — pod třemi vteřinami. */
-  doc.querySelector('[name="Website"]').value = '';
+  trap.value = '';
   ev = new win.Event('submit', { bubbles: true, cancelable: true });
   form.dispatchEvent(ev);
   ok('příliš rychlé odeslání se zastaví', ev.defaultPrevented === true);
@@ -269,6 +276,32 @@ async function main() {
   ev = new win.Event('submit', { bubbles: true, cancelable: true });
   form.dispatchEvent(ev);
   ok('poctivé odeslání projde', ev.defaultPrevented === false);
+  ok('past se do odeslání nedostane', trap.getAttribute('name') === null);
+}
+
+// --- 3b. symbol na 404 reaguje na kurzor -----------------------------------
+{
+  const win = run('SYMBOL NA 404');
+  const doc = win.document;
+  const wrap = doc.querySelector('[data-e404sym]');
+
+  const move = (x, y) => {
+    wrap.ownerDocument.defaultView.dispatchEvent(
+      new win.MouseEvent('pointermove', { clientX: x, clientY: y })
+    );
+  };
+
+  /* Kurzor u pravého spodního rohu, kde symbol sedí. */
+  move(win.innerWidth - 10, win.innerHeight - 10);
+  await frame();
+  const blizko = parseFloat($img(wrap).style.opacity);
+  ok('symbol se za kurzorem posunul', wrap.style.transform.indexOf('translate3d') === 0);
+  ok('u kurzoru je symbol vidět víc', blizko > 0.07);
+
+  /* Kurzor na opačné straně obrazovky. */
+  move(0, 0);
+  await frame();
+  ok('daleko od kurzoru symbol pohasne', parseFloat($img(wrap).style.opacity) < blizko);
 }
 
 // --- 4. citace v referencích se vybarvuje ----------------------------------
