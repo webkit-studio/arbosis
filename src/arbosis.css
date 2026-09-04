@@ -1,0 +1,503 @@
+/* ==========================================================================
+   Arbosis — vlastní styly webu arbosis.cz
+   --------------------------------------------------------------------------
+   Tady je JEN to, co Webflow neumí zapsat na třídu v Designeru. Barvy,
+   rozměry, odsazení, hover stavy jednotlivých prvků a breakpointy patří na
+   třídy ve Webflow. U každého bloku níž je uvedeno, proč tu je.
+
+   Breakpointy odpovídají Webflow: 991 px tablet, 767 px mobil na šířku,
+   479 px mobil na výšku.
+   ========================================================================== */
+
+/* --- Základ stránky ------------------------------------------------------
+   Webflow nemá vlastnost overflow-x na <body> ve style panelu bez toho, aby
+   se sáhlo na samotný tag. Paralax fotky v heru vyjíždí o kus výš než
+   sekce, takže bez tohohle by na mobilu vznikl vodorovný posuv. */
+
+body {
+  overflow-x: hidden;
+}
+
+/* --- Kotvy ---------------------------------------------------------------
+   Odsazení skoku o výšku fixní lišty. Skript 60-reveal.js dělá totéž
+   s dojezdem; tohle je záchrana, když se bundle nenačte nebo návštěvník
+   přijde rovnou na adresu s #kotvou. scroll-margin-top ve style panelu
+   Webflow není. */
+
+#hero,
+#sluzby,
+#postup,
+#pro-firmy,
+#reference,
+#kontakt,
+#faq {
+  scroll-margin-top: 80px;
+}
+
+/* --- Vztahy rodič → potomek ----------------------------------------------
+   Webflow umí hover na prvku, ale ne „při najetí na řádek přebarvi číslo
+   uvnitř". To je vztah dvou tříd a v style panelu se zapsat nedá.
+
+   Barvy dojíždějících čísel v Postupu tu naopak NEJSOU. Skript jim přidává
+   třídy .is-reached / .is-final přímo na prvek, takže jde o obyčejné kombo
+   třídy — a ty patří do Webflow. Jsou nastavené v Designeru. */
+
+.sluzby_row:hover .sluzby_number {
+  color: var(--signal-soft);
+}
+
+/* --- FAQ -----------------------------------------------------------------
+   Značka <details> má vlastní šipku prohlížeče (::-webkit-details-marker,
+   ::marker) a stav [open]. Ani jedno Webflow nezná. */
+
+.faq_question::-webkit-details-marker {
+  display: none;
+}
+
+.faq_question::marker {
+  content: '';
+}
+
+.faq_item[open] .faq_icon {
+  transform: rotate(45deg);
+}
+
+/* --- Světlo v sekci Kontakt ----------------------------------------------
+   Radiální gradient s proměnnou polohou (--gx/--gy plní 70-glow.js)
+   a vlastní animací. Gradienty s proměnnými ani @keyframes Webflow
+   v Designeru nemá. */
+
+[data-glow] {
+  opacity: var(--g, 0.62);
+}
+
+[data-glow] > div {
+  background-image: radial-gradient(
+    circle 620px at var(--gx, 50%) var(--gy, 42%),
+    rgba(184, 217, 190, 0.24),
+    rgba(74, 140, 92, 0.14) 30%,
+    rgba(27, 58, 45, 0) 62%
+  );
+  animation: arbosis-glow 9s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes arbosis-glow {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+/* --- Prstenec kolem formuláře -------------------------------------------
+   Přechod, který objíždí kartu poptávky. Stojí na animaci pozadí gradientu
+   a na :focus-within nad celým blokem — obojí mimo možnosti Designeru. */
+
+[data-ring],
+[data-ring-b] {
+  background-image: linear-gradient(
+    115deg,
+    #4a8c5c,
+    #9bc5a2 20%,
+    #c9dfc9 34%,
+    #7baf7e 56%,
+    #9bc5a2 78%,
+    #4a8c5c 100%
+  );
+  background-size: 300% 100%;
+  transition: opacity 620ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+[data-ring-b] {
+  filter: blur(20px);
+}
+
+[data-fwrap]:hover [data-ring] {
+  opacity: 0.5;
+  animation: arbosis-ring 9s linear infinite;
+}
+
+[data-fwrap]:hover [data-ring-b] {
+  opacity: 0.22;
+  animation: arbosis-ring 9s linear infinite;
+}
+
+[data-fwrap]:focus-within [data-ring] {
+  animation: arbosis-ring 9s linear infinite, arbosis-ring-pulse 2.9s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+[data-fwrap]:focus-within [data-ring-b] {
+  animation: arbosis-ring 9s linear infinite, arbosis-ring-pulse-b 2.9s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes arbosis-ring {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes arbosis-ring-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.68;
+  }
+}
+
+@keyframes arbosis-ring-pulse-b {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* --- Viditelný focus -----------------------------------------------------
+   Jeden prstenec pro všechny ovládací prvky. Ve Webflow by se musel
+   naklikat zvlášť na každé třídě a při přidání dalšího tlačítka by se na
+   něj zapomnělo. */
+
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+.w-input:focus-visible,
+.w-select:focus-visible {
+  outline: 2px solid var(--signal, #e8673c);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.btn:focus-visible,
+.form_submit:focus-visible {
+  outline-color: var(--kost, #f5f2ec);
+}
+
+/* --- Vypnuté animace -----------------------------------------------------
+   Systémové nastavení „omezit pohyb". Média dotaz Webflow nezná, přitom bez
+   něj se točící prstenec a pulzující světlo nedají zastavit. */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-glow] > div,
+  [data-ring],
+  [data-ring-b] {
+    animation: none !important;
+  }
+
+  [data-glow] > div {
+    opacity: 0.85;
+  }
+
+  * {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- Cookie lišta --------------------------------------------------------
+   Markup se vykresluje z JS (viz src/modules/80-cookies.js), takže třídy
+   .cc_* ve Webflow neexistují a nedá se na ně v Designeru kliknout. Vzhled
+   proto výjimečně patří sem.
+
+   Lišta je záměrně dvojče horní navigace: stejná tmavá zelená, stejná
+   vlasová linka, stejné hranaté tlačítko s šipkou, stejný podtržený hover.
+   Web nemá jediný stín, jediné zaoblení nad 6 px ani jednu pilulku —
+   karta s rozostřeným pozadím by na něm byla cizí těleso.
+
+   Panel s kategoriemi přebírá zápis ze sekce Postup: oranžové číslo
+   a vodorovná linka. */
+
+.cc {
+  position: fixed;
+  z-index: 9999;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.cc_bar,
+.cc_panel {
+  pointer-events: auto;
+  padding: 0 5%;
+  background-color: var(--les, #1b3a2d);
+  border-top: 1px solid rgba(245, 242, 236, 0.14);
+  transform: translateY(100%);
+  transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cc.is-ready .cc_bar {
+  transform: translateY(0);
+}
+
+.cc.is-gone .cc_bar,
+.cc.is-gone .cc_panel {
+  transform: translateY(100%);
+}
+
+.cc_bar.is-hidden {
+  display: none;
+}
+
+.cc_panel {
+  display: none;
+}
+
+.cc_panel.is-open {
+  display: block;
+  transform: translateY(0);
+}
+
+.cc_inner {
+  display: flex;
+  max-width: 75rem;
+  margin: 0 auto;
+  padding: 26px 0;
+  align-items: center;
+  gap: 48px;
+}
+
+/* Text musí umět růst, jinak se věta zbytečně láme na tři řádky. */
+.cc_text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cc_inner-panel {
+  display: block;
+  padding-top: 32px;
+  padding-bottom: 32px;
+}
+
+.cc_eyebrow {
+  color: rgba(245, 242, 236, 0.5);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cc_desc {
+  max-width: 76ch;
+  margin: 10px 0 0 0;
+  color: rgba(245, 242, 236, 0.78);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.cc_inline {
+  color: var(--kost, #f5f2ec);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(245, 242, 236, 0.4);
+}
+
+.cc_inline:hover {
+  text-decoration-color: var(--signal-cta, #c4491f);
+}
+
+.cc_actions {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+  align-items: center;
+  gap: 28px;
+}
+
+/* Hranaté tlačítko se šipkou — stejné jako „Poptat zahradu" v liště
+   a „Odeslat poptávku" u formuláře. */
+.cc_btn {
+  display: inline-flex;
+  height: 48px;
+  padding: 0 26px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 6px;
+  background-color: var(--signal-cta, #c4491f);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.cc_btn:hover {
+  background-color: var(--signal-cta-hover, #a83e1a);
+}
+
+.cc_arrow {
+  font-weight: 600;
+}
+
+/* Tichý odkaz s oranžovým podtržením na hover — přesně jako položky menu.
+   Odmítnutí je stejně dostupné jako souhlas, jen tišší; schované odmítnutí
+   je to, za co ÚOOÚ pokutuje. */
+.cc_quiet {
+  padding-bottom: 4px;
+  border-bottom: 1px solid transparent;
+  color: rgba(245, 242, 236, 0.72);
+  font-size: 15px;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 200ms cubic-bezier(0.2, 0, 0, 1), border-color 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.cc_quiet:hover {
+  border-bottom-color: var(--signal-cta, #c4491f);
+  color: var(--kost, #f5f2ec);
+}
+
+.cc_cats {
+  display: grid;
+  margin-top: 28px;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+/* Číslo a linka ze sekce Postup. */
+.cc_rule {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cc_num {
+  color: var(--signal, #e8673c);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cc_line {
+  flex: 1 1 auto;
+  height: 1px;
+  background-color: rgba(245, 242, 236, 0.2);
+}
+
+.cc_cat-head {
+  display: flex;
+  margin-top: 18px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cc_cat-name {
+  color: var(--kost, #f5f2ec);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.cc_always {
+  color: rgba(245, 242, 236, 0.45);
+  font-size: 13px;
+}
+
+.cc_cat-desc {
+  margin: 10px 0 0 0;
+  color: rgba(245, 242, 236, 0.7);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.cc_switch {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 44px;
+  height: 24px;
+  border: 1px solid rgba(245, 242, 236, 0.28);
+  border-radius: 999px;
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color 220ms cubic-bezier(0.2, 0, 0, 1), border-color 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.cc_switch.is-on {
+  border-color: var(--salvej, #7baf7e);
+  background-color: var(--salvej, #7baf7e);
+}
+
+.cc_knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background-color: var(--kost, #f5f2ec);
+  transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.cc_switch.is-on .cc_knob {
+  transform: translateX(20px);
+}
+
+.cc_panel-actions {
+  display: flex;
+  margin-top: 36px;
+  padding-top: 26px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 28px;
+  border-top: 1px solid rgba(245, 242, 236, 0.14);
+}
+
+@media (max-width: 767px) {
+  .cc_bar,
+  .cc_panel {
+    padding: 0 6%;
+  }
+
+  .cc_inner {
+    display: block;
+    padding: 22px 0;
+  }
+
+  .cc_actions {
+    margin-top: 22px;
+    justify-content: flex-end;
+    gap: 22px;
+  }
+
+  .cc_cats {
+    display: block;
+  }
+
+  .cc_cat + .cc_cat {
+    margin-top: 32px;
+  }
+
+  .cc_panel-inner,
+  .cc_inner-panel {
+    max-height: 78vh;
+    overflow-y: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cc_bar,
+  .cc_panel,
+  .cc_switch,
+  .cc_knob {
+    transition: none !important;
+  }
+
+  .cc_bar {
+    transform: none;
+  }
+}

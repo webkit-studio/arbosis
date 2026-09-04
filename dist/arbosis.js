@@ -1,0 +1,1376 @@
+/*!
+ * Arbosis — sloučený skript webu arbosis.cz
+ * Sestaveno z src/modules/ — needituj tento soubor, uprav zdroj a spusť `node build.js`.
+ * Moduly: 00-core.js, 10-nav.js, 20-hero.js, 30-sluzby.js, 40-postup.js, 50-faq.js, 60-reveal.js, 65-quote.js, 70-e404.js, 70-glow.js, 80-cookies.js, 85-antispam.js, 90-gtm.js
+ */
+(function () {
+'use strict';
+
+/* ==========================================================================
+   Jádro — sdílené pomocné funkce a mapa selektorů
+   --------------------------------------------------------------------------
+   Web stojí na Webflow. Tenhle bundle přidává jen chování, které se
+   v Designeru naklikat nedá. Vzhled (barvy, rozměry, hover stavy,
+   breakpointy) patří na třídy ve Webflow, ne sem.
+
+   HOOK ATRIBUTY: moduly cílí na data-atributy, ne na názvy tříd. Třídu
+   ve Webflow kdokoliv přejmenuje bez varování, data-atribut ne — je vidět
+   v panelu nastavení prvku a nikdo ho omylem nepřepíše stylováním.
+
+   POZOR — prvek Image ve Webflow vlastní data-atributy ZAHAZUJE. Ověřeno
+   na publikované stránce: data-plx i data-spimg z markupu zmizely, zatímco
+   stejné atributy na obalových divech zůstaly. Hook proto nikdy nepatří na
+   <img>; dává se na obal a obrázek se uvnitř najde strukturálně ($1('img', obal)).
+   Uvnitř náhledu i hera je jediný obrázek, takže je výběr jednoznačný.
+   ========================================================================== */
+
+var SEL = {
+  /* navigace */
+  nav: '[data-nav]',
+  navCta: '[data-ncta]',
+  navLink: '[data-nl]',
+
+  /* hero */
+  hero: '[data-hero]',
+  heroWord: '[data-hwi]',
+  heroFade: '[data-hsub]',
+  heroVeil: '[data-hveil]',
+  counter: '[data-count]',
+
+  /* služby */
+  sluzbyList: '[data-slist]',
+  sluzbyRow: '[data-srow]',
+  sluzbyNumber: '[data-sn]',
+  sluzbyMedia: '[data-smedia]',
+  sluzbyPanel: '[data-spanel]',
+  /* skrytý Collection List s fotkami z CMS, viz 30-sluzby.js */
+  sluzbyItem: '[data-sitem]',
+  sluzbyName: '[data-sname]',
+  sluzbyCycle: '[data-scycle]',
+  sluzbyFeedPhoto: '[data-sphoto]',
+
+  /* postup */
+  postupSection: '[data-psec]',
+  postupLine: '[data-pline]',
+  postupLineDone: '[data-pline2]',
+  postupStep: '[data-pstep]',
+
+  /* ostatní */
+  reveal: '[data-rv]',
+  glow: '[data-glow]',
+  quote: '[data-quote]',
+  /* symbol v rohu stránky 404, viz 70-e404.js */
+  e404Symbol: '[data-e404sym]',
+  form: '#form-poptavka',
+
+  /* měření — hook atribut data-gtm, viz 90-gtm.js */
+  gtm: '[data-gtm]'
+};
+
+/* Kotvy, na které reaguje zvýraznění v navigaci. */
+var SECTIONS = ['sluzby', 'postup', 'reference', 'kontakt'];
+
+/** Výška fixní lišty — o kolik se odsazuje skok na kotvu. */
+var NAV_OFFSET = 80;
+
+/** Vrátí pole prvků pro daný selektor. */
+function $$(sel, root) {
+  return Array.prototype.slice.call((root || document).querySelectorAll(sel));
+}
+
+/** Vrátí první prvek nebo null. */
+function $1(sel, root) {
+  return (root || document).querySelector(sel);
+}
+
+/** Spustí callback po DOMContentLoaded (nebo hned, pokud už proběhl). */
+function onReady(fn) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fn, { once: true });
+  } else {
+    fn();
+  }
+}
+
+/** Je na stránce alespoň jeden prvek daného selektoru? Modul se pak spustí. */
+function has(sel) {
+  return !!$1(sel);
+}
+
+/* --- Pohyb ----------------------------------------------------------------
+   Jediný zdroj pravdy pro celý bundle. Když má návštěvník v systému vypnuté
+   animace, moduly nic neanimují — rovnou dosadí koncový stav. Nikdy se
+   nesmí stát, že obsah zůstane skrytý jen proto, že animace neproběhla. */
+var ANIM = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+var EASE = 'cubic-bezier(0.16,1,0.3,1)';
+
+/** Odloží práci na další snímek — dvakrát, aby prohlížeč stihl vykreslit
+    výchozí stav dřív, než se na něj pustí přechod. */
+function nextFrame(fn) {
+  requestAnimationFrame(function () {
+    requestAnimationFrame(fn);
+  });
+}
+
+/** Přišpendlí posluchač scrollu tak, aby se počítalo nejvýš jednou za snímek. */
+function onScroll(fn) {
+  var pending = false;
+  function tick() {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(function () {
+      pending = false;
+      fn();
+    });
+  }
+  window.addEventListener('scroll', tick, { passive: true });
+  window.addEventListener('resize', tick);
+  fn();
+}
+
+/** Text prvku bez okolních mezer. */
+function text(el) {
+  return el ? (el.textContent || '').trim() : '';
+}
+
+/** Číslo s pevnou mezerou po tisících — 7 000, ne 7000. */
+function formatNumber(n) {
+  return Math.round(n)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+/** Zápis do dataLayeru. Když GTM na stránce není, jen se založí pole. */
+function push(payload) {
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push(payload);
+}
+
+/* ==========================================================================
+   Navigace — stav po odscrollování a zvýraznění aktivní sekce
+   --------------------------------------------------------------------------
+   Proč JS a ne Webflow: obojí reaguje na polohu stránky, ne na stav prvku.
+   Interakce (IX2) by to uměly naklikat, ale scroll trigger v IX2 se váže na
+   konkrétní prvek a jeho procenta — tady potřebujeme prostou prahovou
+   hodnotu a průsečík se sekcí. Třída .is-scrolled i .is-current jsou přitom
+   normální třídy ve Webflow, takže vzhled zůstává v Designeru.
+   ========================================================================== */
+
+(function () {
+  if (!has(SEL.nav)) return;
+
+  var THRESHOLD = 80;
+
+  onReady(function () {
+    var nav = $1(SEL.nav);
+    var cta = $1(SEL.navCta);
+
+    onScroll(function () {
+      var scrolled = window.pageYOffset > THRESHOLD;
+      nav.classList.toggle('is-scrolled', scrolled);
+      /* CTA v liště se po odscrollování obtáhne místo výplně — na tmavém
+         pruhu by plná oranžová byla druhá plocha vedle sebe. */
+      if (cta) cta.classList.toggle('is-outline', scrolled);
+    });
+
+    /* Zvýraznění položky menu podle sekce uprostřed okna. */
+    if (!('IntersectionObserver' in window)) return;
+
+    var spy = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          var link = $1('[data-nl="' + entry.target.id + '"]');
+          if (link) link.classList.toggle('is-current', entry.isIntersecting);
+        });
+      },
+      { rootMargin: '-40% 0px -55% 0px' }
+    );
+
+    SECTIONS.forEach(function (id) {
+      var section = document.getElementById(id);
+      if (section) spy.observe(section);
+    });
+  });
+})();
+
+/* ==========================================================================
+   Hero — nájezd claimu a počítadla
+   --------------------------------------------------------------------------
+   Tři slova claimu vyjedou zpod masky, zbytek sekce se prolne, čísla
+   dopočítají. Výchozí (skrytý) stav nastavuje skript, ne CSS — kdyby se
+   bundle nenačetl, hero se vykreslí normálně a nic nezmizí.
+
+   Čeká se na dokreslení fotky na pozadí (max 1,2 s), aby animace nezačala
+   nad prázdným tmavým obdélníkem.
+   ========================================================================== */
+
+(function () {
+  if (!has(SEL.hero)) return;
+
+  var IMAGE_TIMEOUT = 1200;
+  var IMAGE_DELAY = 500;
+  var COUNTER_DURATION = 1100;
+  var COUNTER_DELAY = 950;
+  var DEFAULT_PARALLAX = 0.04;
+
+  function setCounters(counters, animated) {
+    counters.forEach(function (el) {
+      var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+      var suffix = el.getAttribute('data-suffix') || '';
+
+      if (!animated) {
+        el.textContent = formatNumber(target) + suffix;
+        return;
+      }
+
+      el.textContent = '0' + suffix;
+      setTimeout(function () {
+        var start = performance.now();
+        (function step() {
+          var p = Math.min(1, (performance.now() - start) / COUNTER_DURATION);
+          el.textContent = formatNumber(target * (1 - Math.pow(1 - p, 3))) + suffix;
+          if (p < 1) requestAnimationFrame(step);
+        })();
+      }, COUNTER_DELAY);
+    });
+  }
+
+  onReady(function () {
+    var hero = $1(SEL.hero);
+    var words = $$(SEL.heroWord, hero);
+    var fades = $$(SEL.heroFade, hero);
+    var veil = $1(SEL.heroVeil, hero);
+    var counters = $$(SEL.counter, hero);
+
+    if (!ANIM) {
+      setCounters(counters, false);
+      return;
+    }
+
+    words.forEach(function (w) {
+      w.style.transition = 'none';
+      w.style.transform = 'translateY(112%)';
+    });
+    fades.forEach(function (f) {
+      f.style.transition = 'none';
+      f.style.opacity = '0';
+      f.style.transform = 'translateY(14px)';
+    });
+    if (veil) {
+      veil.style.transition = 'none';
+      veil.style.opacity = '0';
+    }
+    setCounters(counters, true);
+
+    function play() {
+      nextFrame(function () {
+        if (veil) {
+          veil.style.transition = 'opacity 600ms ' + EASE;
+          veil.style.opacity = '1';
+        }
+        words.forEach(function (w, i) {
+          w.style.transition = 'transform 750ms ' + EASE + ' ' + (180 + i * 120) + 'ms';
+          w.style.transform = 'translateY(0)';
+        });
+        fades.forEach(function (f, i) {
+          var d = 620 + i * 110;
+          f.style.transition = 'opacity 650ms ' + EASE + ' ' + d + 'ms,transform 650ms ' + EASE + ' ' + d + 'ms';
+          f.style.opacity = '1';
+          f.style.transform = 'translateY(0)';
+        });
+      });
+    }
+
+    var fired = false;
+    function go(delay) {
+      if (fired) return;
+      fired = true;
+      setTimeout(play, delay);
+    }
+
+    var image = $1('img', hero);
+    if (image && !image.complete) {
+      image.addEventListener('load', function () { go(IMAGE_DELAY); }, { once: true });
+      image.addEventListener('error', function () { go(0); }, { once: true });
+      setTimeout(function () { go(0); }, IMAGE_TIMEOUT);
+    } else {
+      go(IMAGE_DELAY);
+    }
+
+    /* Jemný paralax fotky na pozadí. Rychlost sedí na sekci, ne na obrázku —
+       prvek Image ve Webflow vlastní atributy zahazuje (viz 00-core.js). */
+    if (image) {
+      var rate = parseFloat(hero.getAttribute('data-plx')) || DEFAULT_PARALLAX;
+      onScroll(function () {
+        image.style.transform = 'translateY(' + window.pageYOffset * rate + 'px)';
+      });
+    }
+  });
+})();
+
+/* ==========================================================================
+   Služby — fotka u řádku
+   --------------------------------------------------------------------------
+   POČÍTAČ: náhled sleduje kurzor a ukazuje fotku řádku pod ním.
+   MOBIL A TABLET: kurzor neexistuje, takže fotku otevírá scroll — vždycky
+   jen u jednoho řádku, u toho nejblíž ke čtené části obrazovky.
+
+   Jedna fotka na jeden řádek. Obrázek se bere přímo z prvku ve Webflow
+   (.sluzby_photo uvnitř řádku), takže se v Designeru vyměňuje jako každá
+   jiná fotka a skript se o nic nestará.
+
+   FOTKY CHODÍ Z CMS. V sekci je skrytý Collection List (třída .sluzby_feed,
+   položky nesou data-sitem) s kolekcí Fotografie. Každá položka veze název
+   služby (data-sname), všechny fotky (data-sphoto) a přepínač Střídat fotky.
+   Řádek se spáruje podle nadpisu, takže se v CMS nic nečísluje ani neindexuje
+   — Šimon jen založí položku se stejným názvem, jaký má služba na webu.
+
+   PŘEPÍNAČ SE ČTE Z PODMÍNĚNÉ VIDITELNOSTI. Boolean pole se přes API na
+   atribut navázat nedá (vrací prázdný seznam cílů), zato na viditelnost ano.
+   Webflow vypnutý prvek nemaže, jen mu přidá třídu w-condition-invisible —
+   a to se z JS pozná spolehlivě.
+
+   Bez CMS položky si řádek vezme fotku, kterou má nastavenou přímo ve Webflow.
+   Web tedy funguje i s prázdnou kolekcí.
+   Bez atributu (dnešní stav) drží jednu fotku.
+
+   Proč to na mobilu nepřeskakuje:
+   1. Přepne se, až je jiný řádek blíž o SWITCH_MARGIN. Bez toho by stačil
+      pixel scrollu a otevřený řádek by se měnil sem a tam.
+   2. Zavírá se BEZ animace a se srovnáním scrollu, když je zavíraný řádek
+      nad viewportem. Jinak by se obsah pod prstem posunul o výšku fotky.
+   3. Poslední otevřený řádek zůstává otevřený, i když seznam odscrolluje
+      pryč — jinak by se stránka zkrátila a scroll uskočil.
+   ========================================================================== */
+
+(function () {
+  if (!has(SEL.sluzbyList)) return;
+
+  var PHOTO_INTERVAL = 500;
+  var DESKTOP_MIN = 992;
+
+  /* Kam v okně míří „čtená" linka. 0.4 = o kus nad středem, kde oko sedí. */
+  var FOCUS_LINE = 0.4;
+
+  /* O kolik pixelů musí být nový řádek blíž, aby se přepnulo. */
+  var SWITCH_MARGIN = 64;
+
+  /* Podíl výšky okna, který zabere otevřená fotka. */
+  var OPEN_RATIO = 0.42;
+
+  /* Název služby z řádku i z CMS položky ve stejném tvaru, ať se dají
+     porovnat. Webflow kolem textu nechává mezery a nezalomitelné mezery. */
+  function key(value) {
+    return String(value || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  /* Přečte skrytý Collection List do mapy název → { photos, cycle }. */
+  function readFeed() {
+    var map = {};
+    $$(SEL.sluzbyItem).forEach(function (item) {
+      var nameEl = $1(SEL.sluzbyName, item);
+      var name = key(nameEl && text(nameEl));
+      if (!name) return;
+
+      var photos = [];
+      $$(SEL.sluzbyFeedPhoto, item).forEach(function (img) {
+        var src = img.currentSrc || img.getAttribute('src');
+        if (src) photos.push(src);
+      });
+
+      var flag = $1(SEL.sluzbyCycle, item);
+      map[name] = {
+        photos: photos,
+        cycle: !!flag && !flag.classList.contains('w-condition-invisible')
+      };
+    });
+    return map;
+  }
+
+  function entryFor(feed, row) {
+    return feed[key(text($1('h3', row)))] || null;
+  }
+
+  function photosOf(feed, row) {
+    var entry = entryFor(feed, row);
+    if (entry && entry.photos.length) return entry.photos;
+
+    /* Bez CMS položky zůstává fotka nastavená přímo na řádku ve Webflow. */
+    var main = $1('img', $1(SEL.sluzbyMedia, row) || row);
+    return main ? [main.currentSrc || main.src] : [];
+  }
+
+  function cyclesOf(feed, row) {
+    var entry = entryFor(feed, row);
+    return !!entry && entry.cycle;
+  }
+
+  onReady(function () {
+    var list = $1(SEL.sluzbyList);
+    var rows = $$(SEL.sluzbyRow, list);
+    if (!rows.length) return;
+
+    var feed = readFeed();
+
+    var desktop = window.matchMedia('(min-width: ' + DESKTOP_MIN + 'px)');
+
+    /* ---- náhled u kurzoru (počítač) ------------------------------------ */
+    var panel = $1(SEL.sluzbyPanel);
+    var panelImage = panel && $1('img', panel);
+    var timer = null;
+    var frames = [];
+    var index = 0;
+
+    function show() {
+      var url = frames[index % frames.length];
+      if (url && panelImage.getAttribute('src') !== url) panelImage.setAttribute('src', url);
+    }
+
+    function stopRotation() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    function startRotation(row) {
+      stopRotation();
+      frames = photosOf(feed, row);
+      index = 0;
+      if (!frames.length) return;
+      show();
+      /* Střídá se jen když si to služba v CMS vyžádala a fotek je víc. */
+      if (cyclesOf(feed, row) && frames.length > 1 && ANIM) {
+        timer = setInterval(function () {
+          index += 1;
+          show();
+        }, PHOTO_INTERVAL);
+      }
+    }
+
+    function hoverActive() {
+      return desktop.matches && ANIM;
+    }
+
+    function closePanel() {
+      stopRotation();
+      if (!panel) return;
+      panel.style.opacity = '0';
+      panel.style.transform = 'scale(0.94)';
+    }
+
+    if (panel && panelImage) {
+      list.addEventListener('mouseleave', closePanel);
+
+      rows.forEach(function (row) {
+        row.addEventListener('mouseenter', function () {
+          if (!hoverActive()) return;
+          startRotation(row);
+          panel.style.opacity = '1';
+          panel.style.transform = 'scale(1)';
+        });
+      });
+
+      list.addEventListener('mousemove', function (e) {
+        if (!hoverActive()) return;
+        var w = panel.offsetWidth;
+        var h = panel.offsetHeight;
+        panel.style.left = Math.max(8, Math.min(e.clientX - w / 2, window.innerWidth - w - 8)) + 'px';
+        panel.style.top = Math.max(8, Math.min(e.clientY - h / 2, window.innerHeight - h - 8)) + 'px';
+      });
+    }
+
+    /* ---- otevírání scrollem (mobil a tablet) --------------------------- */
+    var open = null;
+
+    function mediaOf(row) {
+      return $1(SEL.sluzbyMedia, row);
+    }
+
+    function openHeight() {
+      return Math.round(window.innerHeight * OPEN_RATIO);
+    }
+
+    /** Zavře řádek. Když je nad viewportem, udělá to bez animace a o stejný
+        kus posune scroll — změna výšky tak zůstane pro oko neviditelná. */
+    function collapse(row) {
+      var media = mediaOf(row);
+      if (!media) return;
+
+      var above = row.getBoundingClientRect().bottom < 0;
+      var height = media.offsetHeight;
+
+      if (above) {
+        media.style.transition = 'none';
+        media.style.height = '0px';
+        window.scrollBy(0, -height);
+        /* Přechod se vrací až po dokreslení, jinak by ho prohlížeč sloučil. */
+        requestAnimationFrame(function () {
+          media.style.transition = '';
+        });
+      } else {
+        media.style.height = '0px';
+      }
+
+      var photo = $1('img', media);
+      if (photo) photo.style.opacity = '0';
+    }
+
+    function expand(row) {
+      var media = mediaOf(row);
+      if (!media) return;
+      media.style.height = openHeight() + 'px';
+      var photo = $1('img', media);
+      if (photo) photo.style.opacity = '1';
+    }
+
+    /** Řádek nejblíž čtené lince, s hysterezí proti přeblikávání. */
+    function pick() {
+      var line = window.innerHeight * FOCUS_LINE;
+      var best = null;
+      var bestDistance = Infinity;
+
+      rows.forEach(function (row) {
+        var title = $1('h3', row) || row;
+        var rect = title.getBoundingClientRect();
+        var distance = Math.abs(rect.top + rect.height / 2 - line);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = row;
+        }
+      });
+
+      if (!best || best === open) return open;
+      if (!open) return best;
+
+      var openTitle = $1('h3', open) || open;
+      var openRect = openTitle.getBoundingClientRect();
+      var openDistance = Math.abs(openRect.top + openRect.height / 2 - line);
+
+      /* Zůstává otevřený, dokud není jiný řádek zřetelně blíž. */
+      return bestDistance < openDistance - SWITCH_MARGIN ? best : open;
+    }
+
+    function sync() {
+      if (desktop.matches) return;
+
+      var next = pick();
+      if (!next || next === open) return;
+
+      if (open) collapse(open);
+      open = next;
+      expand(open);
+    }
+
+    function reset() {
+      rows.forEach(function (row) {
+        var media = mediaOf(row);
+        if (!media) return;
+        media.style.transition = 'none';
+        media.style.height = '';
+        var photo = $1('img', media);
+        if (photo) photo.style.opacity = '';
+        requestAnimationFrame(function () {
+          media.style.transition = '';
+        });
+      });
+      open = null;
+    }
+
+    onScroll(sync);
+
+    var onChange = function () {
+      closePanel();
+      reset();
+      sync();
+    };
+    if (desktop.addEventListener) desktop.addEventListener('change', onChange);
+    else if (desktop.addListener) desktop.addListener(onChange);
+  });
+})();
+
+/* ==========================================================================
+   Postup — čára, která dojíždí spolu se scrollem
+   --------------------------------------------------------------------------
+   Čtyři kroky spojuje linka. Jak sekce projíždí oknem, linka se plní
+   oranžovou a čísla kroků se rozsvěcují. Poslední úsek (od SPLIT dál) je
+   zelený — je to krok „a udržujeme", který na rozdíl od zbytku nikdy
+   nekončí.
+
+   Proč JS: hodnota se počítá z polohy sekce v okně. Šířka i výška se řídí
+   stejným číslem, protože na mobilu je linka svislá (breakpoint řeší CSS
+   ve Webflow, skript jen dosadí procenta do správné vlastnosti).
+   ========================================================================== */
+
+(function () {
+  if (!has(SEL.postupSection)) return;
+
+  /* Podíl dráhy, kde oranžová končí a začíná zelená. Sedí na střed kroku 04. */
+  var SPLIT = 69;
+  var STEP_AT = [3, 36, 69, 100];
+  var MOBILE_MAX = 767;
+
+  onReady(function () {
+    var section = $1(SEL.postupSection);
+    var line = $1(SEL.postupLine, section);
+    var lineDone = $1(SEL.postupLineDone, section);
+    var steps = $$(SEL.postupStep, section);
+    if (!line) return;
+
+    onScroll(function () {
+      var progress = 100;
+
+      if (ANIM) {
+        var rect = section.getBoundingClientRect();
+        var from = window.innerHeight * 0.75;
+        var to = window.innerHeight * 0.45 - rect.height / 2;
+        progress = Math.max(0, Math.min(1, (from - rect.top) / Math.max(1, from - to))) * 100;
+      }
+
+      var run = Math.min(progress, SPLIT);
+      var done = Math.max(0, progress - SPLIT);
+      var vertical = window.innerWidth <= MOBILE_MAX;
+
+      if (vertical) {
+        line.style.height = run + '%';
+        line.style.width = '';
+        if (lineDone) {
+          lineDone.style.height = done + '%';
+          lineDone.style.width = '';
+        }
+      } else {
+        line.style.width = run + '%';
+        line.style.height = '';
+        if (lineDone) {
+          lineDone.style.width = done + '%';
+          lineDone.style.height = '';
+        }
+      }
+
+      steps.forEach(function (step, i) {
+        step.classList.toggle('is-reached', progress >= STEP_AT[i]);
+        step.classList.toggle('is-final', i === steps.length - 1 && progress >= STEP_AT[i]);
+      });
+    });
+  });
+})();
+
+/* ==========================================================================
+   FAQ — plynulé rozbalení a jen jedna otevřená otázka
+   --------------------------------------------------------------------------
+   Značka <details> umí rozbalování sama, ale skokem a bez omezení na jednu
+   položku. Skript proto přebírá kliknutí: dopočítá výšku odpovědi (auto
+   se animovat nedá) a ostatní položky zavře.
+
+   Bez JS zůstává accordion plně funkční — jen skáče. To je záměr: obsah
+   musí být dostupný i když se bundle nenačte.
+   ========================================================================== */
+
+(function () {
+  if (!has('.faq_item')) return;
+
+  var DURATION = 400;
+
+  onReady(function () {
+    var items = $$('.faq_item');
+
+    items.forEach(function (item) {
+      var summary = $1('summary', item);
+      var body = $1('.faq_answer', item);
+      if (!summary || !body) return;
+
+      body.style.overflow = 'hidden';
+      body.style.transition = ANIM ? 'height ' + DURATION + 'ms ' + EASE : 'none';
+      body.style.height = item.open ? 'auto' : '0px';
+
+      function collapse() {
+        if (!item.open) return;
+        body.style.height = body.scrollHeight + 'px';
+        nextFrame(function () {
+          body.style.height = '0px';
+        });
+        window.setTimeout(function () {
+          item.open = false;
+        }, ANIM ? DURATION : 0);
+      }
+
+      function expand() {
+        item.open = true;
+        body.style.height = '0px';
+        nextFrame(function () {
+          body.style.height = body.scrollHeight + 'px';
+        });
+        window.setTimeout(function () {
+          if (item.open) body.style.height = 'auto';
+        }, ANIM ? DURATION : 0);
+      }
+
+      summary.addEventListener('click', function (e) {
+        e.preventDefault();
+        var willOpen = !item.open;
+
+        items.forEach(function (other) {
+          if (other !== item && other.open) {
+            var otherBody = $1('.faq_answer', other);
+            if (otherBody) {
+              otherBody.style.height = otherBody.scrollHeight + 'px';
+              nextFrame(function () {
+                otherBody.style.height = '0px';
+              });
+            }
+            window.setTimeout(function () {
+              other.open = false;
+            }, ANIM ? DURATION : 0);
+          }
+        });
+
+        if (willOpen) {
+          expand();
+          push({ event: 'faq_open', question: text($1('.faq_title', item)) });
+        } else {
+          collapse();
+        }
+      });
+    });
+  });
+})();
+
+/* ==========================================================================
+   Nájezd sekcí a plynulý skok na kotvu
+   --------------------------------------------------------------------------
+   Nájezd: prvky s data-rv se při vstupu do okna prolnou zdola. Číslo
+   v atributu je prodleva v ms, takže se dá skládat pořadí uvnitř sekce.
+   Prvky, které jsou vidět hned po načtení, se nikdy neskrývají — jinak by
+   nad ohybem chvíli blikalo prázdno.
+
+   Kotvy: skok odsazený o výšku fixní lišty. Bez skriptu kotva funguje taky,
+   jen bez dojezdu — proto je v arbosis.css ještě scroll-margin-top.
+   ========================================================================== */
+
+(function () {
+  onReady(function () {
+    var items = $$(SEL.reveal);
+
+    if (items.length && ANIM && 'IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            var el = entry.target;
+            var delay = el.getAttribute('data-rv') || 0;
+            el.style.transition =
+              'opacity 600ms ' + EASE + ' ' + delay + 'ms,transform 600ms ' + EASE + ' ' + delay + 'ms';
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+            observer.unobserve(el);
+          });
+        },
+        { threshold: 0.12, rootMargin: '0px 0px -6% 0px' }
+      );
+
+      items.forEach(function (el) {
+        if (el.getBoundingClientRect().top < window.innerHeight * 0.92) return;
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(18px)';
+        observer.observe(el);
+      });
+    }
+
+    /* Plynulý skok na kotvu uvnitř stránky. */
+    $$('a[href^="#"]').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        var id = link.getAttribute('href');
+        if (!id || id === '#') return;
+
+        var target = document.getElementById(id.slice(1));
+        if (!target) return;
+
+        e.preventDefault();
+        var to = target.getBoundingClientRect().top + window.pageYOffset - NAV_OFFSET;
+
+        if (!ANIM || !('requestAnimationFrame' in window)) {
+          window.scrollTo(0, to);
+          return;
+        }
+
+        var from = window.pageYOffset;
+        var start = performance.now();
+        var duration = Math.min(900, 400 + Math.abs(to - from) * 0.2);
+
+        (function step() {
+          var p = Math.min(1, (performance.now() - start) / duration);
+          var eased = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+          window.scrollTo(0, from + (to - from) * eased);
+          if (p < 1) requestAnimationFrame(step);
+        })();
+      });
+    });
+  });
+})();
+
+/* ==========================================================================
+   Reference — citace se vybarvuje se scrollem
+   --------------------------------------------------------------------------
+   Text začíná světle a jak sekce projíždí oknem, slovo po slovu tmavne do
+   plné zelené. Čte se to jako by to někdo právě říkal.
+
+   PROČ JS. Efekt potřebuje polohu odstavce v okně přepočítanou na každém
+   snímku a barvu nastavenou zvlášť každému slovu. Ve Webflow se nedá udělat
+   ani interakcí — IX2 umí hýbat celým prvkem, ne jednotlivými slovy uvnitř
+   textu.
+
+   FAILSAFE. Slova rozděluje a barví teprve skript. Bez JS zůstane citace
+   tak, jak ji nastavil Designer, tedy plnou barvou a čitelná. Totéž při
+   vypnutých animacích — dosadí se rovnou konečný stav.
+
+   HOOK data-quote je v mapě selektorů od začátku, chování k němu ale nikdy
+   nevzniklo. Markup ho na blockquote nese, takže se nic nemusí přidávat.
+   ========================================================================== */
+
+/* Zelená z proměnné Les. Nevybarvené slovo je stejná barva s nízkou
+   průhledností, ne šedá — na kostěném podkladu to drží tón sekce. */
+var QUOTE_RGB = '27, 58, 45';
+var QUOTE_FROM = 0.2;
+
+/* Jak velký kus dráhy trvá přechod jednoho slova. Vyšší číslo = měkčí
+   vlna přes víc slov najednou, nižší = slova naskakují po jednom. */
+var QUOTE_FADE = 0.16;
+
+(function () {
+  if (!has(SEL.quote)) return;
+
+  onReady(function () {
+    var quote = $1(SEL.quote);
+    var raw = text(quote);
+    if (!raw) return;
+
+    var parts = raw.split(/\s+/);
+    var words = [];
+
+    quote.textContent = '';
+    parts.forEach(function (word, i) {
+      var span = document.createElement('span');
+      span.className = 'quote_w';
+      span.textContent = word + (i < parts.length - 1 ? ' ' : '');
+      quote.appendChild(span);
+      words.push(span);
+    });
+
+    function paint(value) {
+      var alpha = QUOTE_FROM + value * (1 - QUOTE_FROM);
+      return 'rgba(' + QUOTE_RGB + ', ' + alpha.toFixed(3) + ')';
+    }
+
+    onScroll(function () {
+      var progress = 1;
+
+      if (ANIM) {
+        var rect = quote.getBoundingClientRect();
+        var from = window.innerHeight * 0.85;
+        var to = window.innerHeight * 0.4 - rect.height;
+        progress = (from - rect.top) / Math.max(1, from - to);
+        progress = Math.max(0, Math.min(1, progress));
+      }
+
+      words.forEach(function (span, i) {
+        /* Poslední slovo musí stihnout dojet dřív, než dráha skončí —
+           proto se prahy vejdou do (1 - QUOTE_FADE). */
+        var start = (i / words.length) * (1 - QUOTE_FADE);
+        var value = Math.max(0, Math.min(1, (progress - start) / QUOTE_FADE));
+        span.style.color = paint(value);
+      });
+    });
+  });
+})();
+
+/* ==========================================================================
+   Symbol na stránce 404 reaguje na kurzor
+   --------------------------------------------------------------------------
+   PROČ NE VE WEBFLOW. Interakce se váže na pozici kurzoru kdekoliv na
+   stránce a přepočítává posun i světlost symbolu. IX2 umí „mouse move over
+   element", ale symbol má pointer-events: none (nesmí brát kliknutí) a leze
+   mimo viewport, takže by se najíždění chytalo jen na jeho viditelném rohu.
+   Navíc IX2 přes API nejde ani přečíst, natož zapsat.
+
+   CO TO DĚLÁ. Strom se za kurzorem naklání, a čím je kurzor blíž pravému
+   spodnímu rohu, tím je vidět víc. Návštěvník, který přišel na chybu, má
+   aspoň co osahat, než klikne zpátky.
+
+   Vypnuté animace i dotykové ovládání interakci přeskočí — na telefonu není
+   kurzor, který by ji spustil, a symbol zůstane v základní poloze.
+   ========================================================================== */
+
+var E404_SHIFT = 34; /* px, maximální posun symbolu */
+var E404_TILT = 2.4; /* deg, maximální naklonění */
+var E404_DIM = 0.07; /* výchozí světlost, drží ji i .e404_symbol */
+var E404_LIT = 0.2; /* světlost, když je kurzor u symbolu */
+
+(function () {
+  onReady(function () {
+    var wrap = $1(SEL.e404Symbol);
+    if (!wrap || !ANIM) return;
+
+    var img = $1('img', wrap);
+    if (!img) return;
+
+    /* Dotykové ovládání nemá kurzor, kterým by se dalo mířit. */
+    if (!window.matchMedia || !window.matchMedia('(hover: hover)').matches) return;
+
+    var px = 0;
+    var py = 0;
+    var queued = false;
+
+    function paint() {
+      queued = false;
+
+      var w = window.innerWidth || 1;
+      var h = window.innerHeight || 1;
+
+      /* -1 vlevo nahoře, +1 vpravo dole. */
+      var x = (px / w) * 2 - 1;
+      var y = (py / h) * 2 - 1;
+
+      wrap.style.transform =
+        'translate3d(' + (-x * E404_SHIFT).toFixed(1) + 'px,' +
+        (-y * E404_SHIFT).toFixed(1) + 'px,0) rotate(' +
+        (x * E404_TILT).toFixed(2) + 'deg)';
+
+      /* Vzdálenost kurzoru od pravého spodního rohu, kde symbol sedí.
+         0 = kurzor je v rohu, 1 = je nejdál, co jde. */
+      var dx = 1 - px / w;
+      var dy = 1 - py / h;
+      var far = Math.min(1, Math.sqrt(dx * dx + dy * dy));
+
+      img.style.opacity = (E404_DIM + (E404_LIT - E404_DIM) * (1 - far)).toFixed(3);
+    }
+
+    window.addEventListener(
+      'pointermove',
+      function (event) {
+        px = event.clientX;
+        py = event.clientY;
+        if (queued) return;
+        queued = true;
+        window.requestAnimationFrame(paint);
+      },
+      { passive: true }
+    );
+  });
+})();
+
+/* ==========================================================================
+   Kontakt — světlo, které jde za kurzorem
+   --------------------------------------------------------------------------
+   Za formulářem se v tmavé sekci pohybuje měkké zelené světlo. Poloha se
+   předává do CSS proměnných --gx / --gy, samotný gradient je v arbosis.css.
+   Dojezd je tlumený (9 % rozdílu na snímek), aby světlo kurzor sledovalo
+   líně a nešlo s ním přesně.
+
+   Nad formulářem se ztlumí — čitelnost polí je přednější než efekt.
+   ========================================================================== */
+
+(function () {
+  if (!has(SEL.glow)) return;
+
+  var IDLE = '0.62';
+  var HOVER = '0.78';
+  var BEHIND_FORM = '0.4';
+  var FOLLOW = 0.09;
+
+  onReady(function () {
+    var glow = $1(SEL.glow);
+    var section = glow.closest('section') || document.getElementById('kontakt');
+    var inner = glow.firstElementChild;
+    if (!section || !inner || !ANIM) return;
+
+    var targetX = 50;
+    var targetY = 42;
+    var currentX = 50;
+    var currentY = 42;
+    var raf = null;
+
+    function paint() {
+      currentX += (targetX - currentX) * FOLLOW;
+      currentY += (targetY - currentY) * FOLLOW;
+      inner.style.setProperty('--gx', currentX.toFixed(2) + '%');
+      inner.style.setProperty('--gy', currentY.toFixed(2) + '%');
+      raf =
+        Math.abs(targetX - currentX) > 0.1 || Math.abs(targetY - currentY) > 0.1
+          ? requestAnimationFrame(paint)
+          : null;
+    }
+
+    function aim(e) {
+      var rect = section.getBoundingClientRect();
+      targetX = Math.max(-8, Math.min(108, ((e.clientX - rect.left) / rect.width) * 100));
+      targetY = Math.max(-8, Math.min(108, ((e.clientY - rect.top) / rect.height) * 100));
+      if (!raf) raf = requestAnimationFrame(paint);
+    }
+
+    function setOpacity(value) {
+      glow.style.setProperty('--g', value);
+    }
+
+    section.addEventListener('mousemove', aim);
+    section.addEventListener('mouseenter', function () { setOpacity(HOVER); });
+    section.addEventListener('mouseleave', function () {
+      setOpacity(IDLE);
+      targetX = 50;
+      targetY = 42;
+      if (!raf) raf = requestAnimationFrame(paint);
+    });
+
+    var card = $1('[data-fwrap]', section);
+    if (card) {
+      card.addEventListener('mouseenter', function () { setOpacity(BEHIND_FORM); });
+      card.addEventListener('mouseleave', function () { setOpacity(HOVER); });
+      card.addEventListener('focusin', function () { setOpacity(BEHIND_FORM); });
+      card.addEventListener('focusout', function () { setOpacity(HOVER); });
+    }
+  });
+})();
+
+/* ==========================================================================
+   Cookie lišta a souhlas s měřením
+   --------------------------------------------------------------------------
+   PROČ TO NENÍ VE WEBFLOW. Lišta se sem vykresluje z JS, ne z Designeru,
+   a je to jediné místo v projektu, kde se markup skládá v kódu. Důvod je
+   právní, ne technický: lišta musí být na KAŽDÉ stránce, včetně těch, které
+   teprve vzniknou. Kdyby to byl komponent, který se ručně vkládá, stačí ho
+   jednou zapomenout a na té stránce se měří bez souhlasu. Tohle zapomenout
+   nejde. Ze stejného důvodu je i vzhled v arbosis.css — třídy .cc_* ve
+   Webflow neexistují, takže se na ně v Designeru nedá kliknout.
+
+   JAK TO NAVAZUJE NA MĚŘENÍ. V hlavičce webu běží Consent Mode v2, který
+   všechno nastaví na 'denied' ještě před načtením GTM. Tenhle modul posílá
+   jen 'consent update'. Do souhlasu tedy GA4 neuloží nic — a bez GTM na
+   stránce se lišta chová stejně, jen nemá komu poslat výsledek.
+
+   ROZSAH SOUHLASU. Web má dvě skupiny cookies: nezbytné (bez souhlasu,
+   výjimka podle § 89 odst. 3 zák. č. 127/2005 Sb.) a analytické. Reklamní
+   kategorie tu vědomě není — web žádnou reklamu neměří. Až přibude, přidá
+   se sem i do zásad, ne jenom sem.
+
+   VOLBA SE PAMATUJE 6 MĚSÍCŮ. Pak se lišta zeptá znovu. Neomezená platnost
+   souhlasu je věc, kterou ÚOOÚ vytýká.
+   ========================================================================== */
+
+var CC_KEY = 'arbosis_cc';
+var CC_VERSION = 1;
+var CC_MAX_AGE = 182 * 24 * 60 * 60 * 1000; /* 6 měsíců v ms */
+var CC_FADE = 260; /* musí sedět s přechodem v .cc v arbosis.css */
+
+/** gtag z hlavičky webu; když tam není, spadne se na plnění dataLayeru. */
+function ccGtag() {
+  if (typeof window.gtag === 'function') return window.gtag.apply(window, arguments);
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push(arguments);
+}
+
+/** Uložená volba, nebo null když chybí, je stará nebo je z jiné verze. */
+function ccStored() {
+  try {
+    var raw = window.localStorage.getItem(CC_KEY);
+    if (!raw) return null;
+    var saved = JSON.parse(raw);
+    if (!saved || saved.v !== CC_VERSION) return null;
+    if (typeof saved.analytics !== 'boolean') return null;
+    if (Date.now() - saved.ts > CC_MAX_AGE) return null;
+    return saved;
+  } catch (e) {
+    /* Soukromé okno nebo zakázané úložiště. Chováme se, jako by souhlas
+       nebyl — tedy se zeptáme a nic se neměří. */
+    return null;
+  }
+}
+
+function ccApply(analytics) {
+  ccGtag('consent', 'update', {
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    analytics_storage: analytics ? 'granted' : 'denied'
+  });
+  push({ event: 'cookie_consent', consent_analytics: analytics ? 'granted' : 'denied' });
+}
+
+function ccSave(analytics) {
+  try {
+    window.localStorage.setItem(
+      CC_KEY,
+      JSON.stringify({ v: CC_VERSION, analytics: analytics, ts: Date.now() })
+    );
+  } catch (e) {
+    /* Neuložilo se — souhlas platí aspoň pro tuhle návštěvu. */
+  }
+  ccApply(analytics);
+}
+
+var CC_HTML =
+  '<div class="cc_bar" data-cc-bar role="dialog" aria-live="polite" aria-label="Souhlas s cookies">' +
+  '<div class="cc_inner">' +
+  '<div class="cc_text">' +
+  '<div class="cc_eyebrow">Cookies</div>' +
+  '<p class="cc_desc">M\u011b\u0159\u00edme n\u00e1v\u0161t\u011bvnost webu, abychom v\u011bd\u011bli, kter\u00e9 sekce lidi zaj\u00edmaj\u00ed. Bez souhlasu se neulo\u017e\u00ed nic a web funguje \u00fapln\u011b stejn\u011b. <a href="/ochrana-osobnich-udaju" class="cc_inline">Z\u00e1sady ochrany osobn\u00edch \u00fadaj\u016f</a></p>' +
+  '</div>' +
+  '<div class="cc_actions">' +
+  '<a href="#" class="cc_quiet" data-cc-settings role="button">Nastaven\u00ed</a>' +
+  '<a href="#" class="cc_quiet" data-cc-reject role="button">Jen nezbytn\u00e9</a>' +
+  '<a href="#" class="cc_btn" data-cc-accept role="button">P\u0159ijmout<span class="cc_arrow">\u2192</span></a>' +
+  '</div>' +
+  '</div>' +
+  '</div>' +
+  '<div class="cc_panel" data-cc-panel role="dialog" aria-modal="true" aria-label="Nastaven\u00ed cookies">' +
+  '<div class="cc_inner cc_inner-panel">' +
+  '<div class="cc_eyebrow">Nastaven\u00ed cookies</div>' +
+  '<div class="cc_cats">' +
+  '<div class="cc_cat">' +
+  '<div class="cc_rule"><span class="cc_num">01</span><span class="cc_line"></span></div>' +
+  '<div class="cc_cat-head"><span class="cc_cat-name">Nezbytn\u00e9</span><span class="cc_always">v\u017edy zapnuto</span></div>' +
+  '<p class="cc_cat-desc">Odesl\u00e1n\u00ed formul\u00e1\u0159e a zapamatov\u00e1n\u00ed t\u00e9hle volby. Bez nich web nefunguje, proto se na n\u011b ptát nemus\u00edme.</p>' +
+  '</div>' +
+  '<div class="cc_cat">' +
+  '<div class="cc_rule"><span class="cc_num">02</span><span class="cc_line"></span></div>' +
+  '<div class="cc_cat-head"><span class="cc_cat-name">Analytick\u00e9</span>' +
+  '<a href="#" class="cc_switch" data-cc-toggle role="switch" aria-checked="false"><span class="cc_knob"></span></a>' +
+  '</div>' +
+  '<p class="cc_cat-desc">Google Analytics. Souhrnn\u011b: kolik lid\u00ed p\u0159i\u0161lo a odkud. Nic, podle \u010deho by \u0161lo poznat konkr\u00e9tn\u00edho \u010dlov\u011bka.</p>' +
+  '</div>' +
+  '</div>' +
+  '<div class="cc_panel-actions">' +
+  '<a href="#" class="cc_quiet" data-cc-save role="button">Ulo\u017eit volbu</a>' +
+  '<a href="#" class="cc_btn" data-cc-accept role="button">P\u0159ijmout v\u0161e<span class="cc_arrow">\u2192</span></a>' +
+  '</div>' +
+  '</div>' +
+  '</div>';
+
+(function () {
+  onReady(function () {
+    var saved = ccStored();
+
+    /* Souhlas už padl — jen se obnoví stav a lišta se vůbec nevykreslí. */
+    if (saved) {
+      ccApply(saved.analytics);
+      return;
+    }
+
+    var root = document.createElement('div');
+    root.className = 'cc';
+    root.setAttribute('data-cc', '');
+    root.innerHTML = CC_HTML;
+    document.body.appendChild(root);
+
+    var bar = $1('[data-cc-bar]', root);
+    var panel = $1('[data-cc-panel]', root);
+    var toggle = $1('[data-cc-toggle]', root);
+    var analytics = false;
+
+    function close() {
+      root.classList.add('is-gone');
+      window.setTimeout(function () {
+        if (root.parentNode) root.parentNode.removeChild(root);
+      }, ANIM ? CC_FADE : 0);
+    }
+
+    function decide(value) {
+      ccSave(value);
+      close();
+    }
+
+    function on(selector, handler) {
+      $$(selector, root).forEach(function (el) {
+        el.addEventListener('click', function (event) {
+          event.preventDefault();
+          handler();
+        });
+      });
+    }
+
+    on('[data-cc-accept]', function () { decide(true); });
+    on('[data-cc-reject]', function () { decide(false); });
+    on('[data-cc-save]', function () { decide(analytics); });
+
+    on('[data-cc-settings]', function () {
+      bar.classList.add('is-hidden');
+      panel.classList.add('is-open');
+    });
+
+    on('[data-cc-toggle]', function () {
+      analytics = !analytics;
+      toggle.setAttribute('aria-checked', analytics ? 'true' : 'false');
+      toggle.classList.toggle('is-on', analytics);
+    });
+
+    /* Lišta nedostane fokus násilím — jen se vysune. Vysunutí je v CSS,
+       tady se přidá třída až po prvním snímku, aby přechod naběhl. */
+    nextFrame(function () { root.classList.add('is-ready'); });
+  });
+
+  /* Odkaz kdekoliv na webu (v zásadách, v patičce) volbu vrátí zpátky:
+     smaže uloženou volbu a přenačte stránku, takže se lišta ukáže znovu. */
+  onReady(function () {
+    $$('[data-cc-open]').forEach(function (link) {
+      link.addEventListener('click', function (event) {
+        event.preventDefault();
+        try { window.localStorage.removeItem(CC_KEY); } catch (e) {}
+        window.location.reload();
+      });
+    });
+  });
+})();
+
+/* ==========================================================================
+   Tichá ochrana formuláře proti botům
+   --------------------------------------------------------------------------
+   PROČ NE reCAPTCHA. Webflow nativně nabízí jen reCAPTCHA v2 se
+   zaškrtávacím políčkem. To je práce navíc pro každého člověka a občas
+   z toho vypadne hledání semaforů na fotkách — u poptávky zahrady je to
+   nejjistější způsob, jak přijít o zákazníka. Tohle je neviditelné: kdo
+   formulář vyplní rukou, nepozná, že tu něco je.
+
+   DVĚ SÍTA. Obě chytají jiný druh robota:
+
+   1. Past (honeypot). Ve formuláři je pole Website, odsunuté mimo obrazovku
+      a vyřazené z tabulátoru. Člověk ho nevidí a nevyplní. Skript, který
+      formulář načte a vyplní všechna pole, ho vyplní vždycky. Pole se
+      záměrně jmenuje anglicky — roboti hledají známé názvy.
+
+   2. Čas. Odeslání dřív než MIN_TIME od načtení stránky. Vyplnit šest polí
+      včetně adresy a zprávy pod tři vteřiny člověk nestihne, robot ano.
+
+   Obojí se dá obejít cíleně mířeným botem. Na běžný plošný spam, o který
+   tady jde, to stačí, a nestojí to návštěvníka ani jedno kliknutí.
+
+   Zachycené odeslání se do GA4 neposílá — konverze se počítá až na
+   .w-form-done (viz 90-gtm.js), a ta se v tomhle případě nikdy neukáže.
+
+   PROČ SE PASTI PŘED ODESLÁNÍM BERE NÁZEV. Webflow posílá do notifikačního
+   e-mailu tabulku všech polí formuláře a v těle se dá použít jenom
+   {{formData}} — jednotlivá pole ne. Past by se tak Šimonovi objevila
+   v každé poptávce jako prázdný řádek „Website“. Prohlížeč do odeslání
+   nezahrne pole bez atributu name, takže se past těsně před serializací
+   odjmenuje. Čte se ještě předtím, past tím nepřestane fungovat.
+
+   Bez JS se past odešle prázdná a v e-mailu zůstane prázdný řádek. Je to
+   kosmetika, ne chyba — poptávka dojde celá.
+   ========================================================================== */
+
+var HP_FIELD = 'input[name="Website"]';
+var HP_NAME = 'Website';
+var MIN_TIME = 3000;
+
+(function () {
+  onReady(function () {
+    var form = $1(SEL.form);
+    if (!form) return;
+
+    var loaded = Date.now();
+    /* Odkaz se drží z načtení stránky: po odjmenování už past přes
+       [name="Website"] nenajdeme. */
+    var trap = $1(HP_FIELD, form);
+
+    /* Capture fáze: posluchač na stejném prvku v capture běží dřív než ten,
+       kterým si Webflow obsluhuje odeslání. stopImmediatePropagation ho pak
+       vůbec nepustí ke slovu. */
+    form.addEventListener(
+      'submit',
+      function (event) {
+        var trapped = !!trap && trap.value.trim() !== '';
+        var tooFast = Date.now() - loaded < MIN_TIME;
+
+        /* Poptávka od člověka: past je prázdná a do e-mailu nemá co přidat. */
+        if (!trapped && trap) trap.removeAttribute('name');
+        if (!trapped && !tooFast) return;
+
+        /* Odeslání neprojde, past se vrací zpátky pro další pokus. */
+        if (trap) trap.setAttribute('name', HP_NAME);
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        push({ event: 'form_blocked', reason: trapped ? 'honeypot' : 'too_fast' });
+      },
+      true
+    );
+  });
+})();
+
+/* ==========================================================================
+   Měření do Google Tag Manageru
+   --------------------------------------------------------------------------
+   Události se posílají do dataLayeru, odkud si je GTM přebírá jako vlastní
+   triggery. Bez GTM na stránce se jen plní pole a nic se neděje — bundle
+   na kontejneru nezávisí.
+
+   HOOK: prvky nesou data-gtm="cta|email|phone". Je to atribut, ne třída —
+   přejmenování třídy ve Webflow tak měření nerozbije. Nová tlačítka stačí
+   označit atributem, do kódu se nesahá.
+
+   Události:
+   | event                | kdy                          | parametry            |
+   |----------------------|------------------------------|----------------------|
+   | menu_click           | klik v hlavní navigaci       | button_text          |
+   | cta_click            | klik na tlačítko s data-gtm  | button_text, section |
+   | contact_click        | klik na e-mail nebo telefon  | method, value        |
+   | faq_open             | rozbalení otázky (50-faq.js) | question             |
+   | contact_form_submit  | odeslání poptávky            | form_id              |
+
+   Konverze je contact_form_submit. Odpaluje se na události Webflow
+   formuláře (w-form-done), ne na kliknutí — kliknutí se počítá i když
+   odeslání selže nebo neprojde validací.
+   ========================================================================== */
+
+(function () {
+  onReady(function () {
+    $$(SEL.navLink).forEach(function (link) {
+      link.addEventListener('click', function () {
+        push({ event: 'menu_click', button_text: text(link) });
+      });
+    });
+
+    $$(SEL.gtm).forEach(function (el) {
+      var kind = el.getAttribute('data-gtm');
+
+      if (kind === 'email' || kind === 'phone') {
+        el.addEventListener('click', function () {
+          push({ event: 'contact_click', method: kind, value: text(el) });
+        });
+        return;
+      }
+
+      el.addEventListener('click', function () {
+        var section = el.closest('section');
+        push({
+          event: 'cta_click',
+          button_text: text(el),
+          section: (section && section.id) || 'bez sekce'
+        });
+      });
+    });
+
+    /* Konverze. Webflow po úspěšném odeslání skryje formulář a odkryje
+       .w-form-done — na to se dá navázat bez jQuery přes MutationObserver.
+       Fallback na submit tu záměrně není: odeslání může selhat. */
+    var form = $1(SEL.form);
+    if (!form || !('MutationObserver' in window)) return;
+
+    var wrapper = form.closest('.w-form');
+    var done = wrapper && $1('.w-form-done', wrapper);
+    if (!done) return;
+
+    var fired = false;
+    new MutationObserver(function () {
+      if (fired) return;
+      var visible = window.getComputedStyle(done).display !== 'none';
+      if (!visible) return;
+      fired = true;
+      push({ event: 'contact_form_submit', form_id: form.getAttribute('id') || 'form-poptavka' });
+    }).observe(done, { attributes: true, attributeFilter: ['style', 'class'] });
+  });
+})();
+
+})();

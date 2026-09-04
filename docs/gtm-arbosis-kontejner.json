@@ -1,0 +1,247 @@
+{
+  "exportFormatVersion": 2,
+  "exportTime": "2026-09-03 10:20:00",
+  "containerVersion": {
+    "path": "accounts/0/containers/0/versions/0",
+    "accountId": "0",
+    "containerId": "0",
+    "containerVersionId": "0",
+    "name": "Arbosis - zaklad mereni",
+    "description": "GA4 + udalosti z webu arbosis.cz. Vygenerovano k importu do kontejneru GTM-KSXFM72X.",
+    "container": {
+      "path": "accounts/0/containers/0",
+      "accountId": "0",
+      "containerId": "0",
+      "name": "arbosis.cz",
+      "publicId": "GTM-KSXFM72X",
+      "usageContext": ["WEB"],
+      "fingerprint": "0"
+    },
+    "variable": [
+      {
+        "accountId": "0", "containerId": "0", "variableId": "1",
+        "name": "DLV - button_text", "type": "v",
+        "parameter": [
+          {"type": "INTEGER", "key": "dataLayerVersion", "value": "2"},
+          {"type": "BOOLEAN", "key": "setDefaultValue", "value": "false"},
+          {"type": "TEMPLATE", "key": "name", "value": "button_text"}
+        ]
+      },
+      {
+        "accountId": "0", "containerId": "0", "variableId": "2",
+        "name": "DLV - section", "type": "v",
+        "parameter": [
+          {"type": "INTEGER", "key": "dataLayerVersion", "value": "2"},
+          {"type": "BOOLEAN", "key": "setDefaultValue", "value": "false"},
+          {"type": "TEMPLATE", "key": "name", "value": "section"}
+        ]
+      },
+      {
+        "accountId": "0", "containerId": "0", "variableId": "3",
+        "name": "DLV - method", "type": "v",
+        "parameter": [
+          {"type": "INTEGER", "key": "dataLayerVersion", "value": "2"},
+          {"type": "BOOLEAN", "key": "setDefaultValue", "value": "false"},
+          {"type": "TEMPLATE", "key": "name", "value": "method"}
+        ]
+      },
+      {
+        "accountId": "0", "containerId": "0", "variableId": "4",
+        "name": "DLV - value", "type": "v",
+        "parameter": [
+          {"type": "INTEGER", "key": "dataLayerVersion", "value": "2"},
+          {"type": "BOOLEAN", "key": "setDefaultValue", "value": "false"},
+          {"type": "TEMPLATE", "key": "name", "value": "value"}
+        ]
+      },
+      {
+        "accountId": "0", "containerId": "0", "variableId": "5",
+        "name": "DLV - question", "type": "v",
+        "parameter": [
+          {"type": "INTEGER", "key": "dataLayerVersion", "value": "2"},
+          {"type": "BOOLEAN", "key": "setDefaultValue", "value": "false"},
+          {"type": "TEMPLATE", "key": "name", "value": "question"}
+        ]
+      },
+      {
+        "accountId": "0", "containerId": "0", "variableId": "6",
+        "name": "DLV - form_id", "type": "v",
+        "parameter": [
+          {"type": "INTEGER", "key": "dataLayerVersion", "value": "2"},
+          {"type": "BOOLEAN", "key": "setDefaultValue", "value": "false"},
+          {"type": "TEMPLATE", "key": "name", "value": "form_id"}
+        ]
+      }
+    ],
+    "trigger": [
+      {
+        "accountId": "0", "containerId": "0", "triggerId": "11",
+        "name": "CE - menu_click", "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {"type": "EQUALS", "parameter": [
+            {"type": "TEMPLATE", "key": "arg0", "value": "{{_event}}"},
+            {"type": "TEMPLATE", "key": "arg1", "value": "menu_click"}
+          ]}
+        ]
+      },
+      {
+        "accountId": "0", "containerId": "0", "triggerId": "12",
+        "name": "CE - cta_click", "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {"type": "EQUALS", "parameter": [
+            {"type": "TEMPLATE", "key": "arg0", "value": "{{_event}}"},
+            {"type": "TEMPLATE", "key": "arg1", "value": "cta_click"}
+          ]}
+        ]
+      },
+      {
+        "accountId": "0", "containerId": "0", "triggerId": "13",
+        "name": "CE - contact_click", "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {"type": "EQUALS", "parameter": [
+            {"type": "TEMPLATE", "key": "arg0", "value": "{{_event}}"},
+            {"type": "TEMPLATE", "key": "arg1", "value": "contact_click"}
+          ]}
+        ]
+      },
+      {
+        "accountId": "0", "containerId": "0", "triggerId": "14",
+        "name": "CE - faq_open", "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {"type": "EQUALS", "parameter": [
+            {"type": "TEMPLATE", "key": "arg0", "value": "{{_event}}"},
+            {"type": "TEMPLATE", "key": "arg1", "value": "faq_open"}
+          ]}
+        ]
+      },
+      {
+        "accountId": "0", "containerId": "0", "triggerId": "15",
+        "name": "CE - contact_form_submit", "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {"type": "EQUALS", "parameter": [
+            {"type": "TEMPLATE", "key": "arg0", "value": "{{_event}}"},
+            {"type": "TEMPLATE", "key": "arg1", "value": "contact_form_submit"}
+          ]}
+        ]
+      }
+    ],
+    "tag": [
+      {
+        "accountId": "0", "containerId": "0", "tagId": "21",
+        "name": "Google tag - GA4 arbosis.cz", "type": "googtag",
+        "parameter": [
+          {"type": "TEMPLATE", "key": "tagId", "value": "G-788G7VTDM6"}
+        ],
+        "firingTriggerId": ["2147479553"],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {"type": "MAP"}
+      },
+      {
+        "accountId": "0", "containerId": "0", "tagId": "22",
+        "name": "GA4 - menu_click", "type": "gaawe",
+        "parameter": [
+          {"type": "BOOLEAN", "key": "sendEcommerceData", "value": "false"},
+          {"type": "TEMPLATE", "key": "eventName", "value": "menu_click"},
+          {"type": "LIST", "key": "eventSettingsTable", "list": [
+            {"type": "MAP", "map": [
+              {"type": "TEMPLATE", "key": "parameter", "value": "button_text"},
+              {"type": "TEMPLATE", "key": "parameterValue", "value": "{{DLV - button_text}}"}
+            ]}
+          ]},
+          {"type": "TEMPLATE", "key": "measurementIdOverride", "value": "G-788G7VTDM6"}
+        ],
+        "firingTriggerId": ["11"],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {"type": "MAP"}
+      },
+      {
+        "accountId": "0", "containerId": "0", "tagId": "23",
+        "name": "GA4 - cta_click", "type": "gaawe",
+        "parameter": [
+          {"type": "BOOLEAN", "key": "sendEcommerceData", "value": "false"},
+          {"type": "TEMPLATE", "key": "eventName", "value": "cta_click"},
+          {"type": "LIST", "key": "eventSettingsTable", "list": [
+            {"type": "MAP", "map": [
+              {"type": "TEMPLATE", "key": "parameter", "value": "button_text"},
+              {"type": "TEMPLATE", "key": "parameterValue", "value": "{{DLV - button_text}}"}
+            ]},
+            {"type": "MAP", "map": [
+              {"type": "TEMPLATE", "key": "parameter", "value": "section"},
+              {"type": "TEMPLATE", "key": "parameterValue", "value": "{{DLV - section}}"}
+            ]}
+          ]},
+          {"type": "TEMPLATE", "key": "measurementIdOverride", "value": "G-788G7VTDM6"}
+        ],
+        "firingTriggerId": ["12"],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {"type": "MAP"}
+      },
+      {
+        "accountId": "0", "containerId": "0", "tagId": "24",
+        "name": "GA4 - contact_click", "type": "gaawe",
+        "parameter": [
+          {"type": "BOOLEAN", "key": "sendEcommerceData", "value": "false"},
+          {"type": "TEMPLATE", "key": "eventName", "value": "contact_click"},
+          {"type": "LIST", "key": "eventSettingsTable", "list": [
+            {"type": "MAP", "map": [
+              {"type": "TEMPLATE", "key": "parameter", "value": "method"},
+              {"type": "TEMPLATE", "key": "parameterValue", "value": "{{DLV - method}}"}
+            ]},
+            {"type": "MAP", "map": [
+              {"type": "TEMPLATE", "key": "parameter", "value": "value"},
+              {"type": "TEMPLATE", "key": "parameterValue", "value": "{{DLV - value}}"}
+            ]}
+          ]},
+          {"type": "TEMPLATE", "key": "measurementIdOverride", "value": "G-788G7VTDM6"}
+        ],
+        "firingTriggerId": ["13"],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {"type": "MAP"}
+      },
+      {
+        "accountId": "0", "containerId": "0", "tagId": "25",
+        "name": "GA4 - faq_open", "type": "gaawe",
+        "parameter": [
+          {"type": "BOOLEAN", "key": "sendEcommerceData", "value": "false"},
+          {"type": "TEMPLATE", "key": "eventName", "value": "faq_open"},
+          {"type": "LIST", "key": "eventSettingsTable", "list": [
+            {"type": "MAP", "map": [
+              {"type": "TEMPLATE", "key": "parameter", "value": "question"},
+              {"type": "TEMPLATE", "key": "parameterValue", "value": "{{DLV - question}}"}
+            ]}
+          ]},
+          {"type": "TEMPLATE", "key": "measurementIdOverride", "value": "G-788G7VTDM6"}
+        ],
+        "firingTriggerId": ["14"],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {"type": "MAP"}
+      },
+      {
+        "accountId": "0", "containerId": "0", "tagId": "26",
+        "name": "GA4 - contact_form_submit (konverze)", "type": "gaawe",
+        "parameter": [
+          {"type": "BOOLEAN", "key": "sendEcommerceData", "value": "false"},
+          {"type": "TEMPLATE", "key": "eventName", "value": "contact_form_submit"},
+          {"type": "LIST", "key": "eventSettingsTable", "list": [
+            {"type": "MAP", "map": [
+              {"type": "TEMPLATE", "key": "parameter", "value": "form_id"},
+              {"type": "TEMPLATE", "key": "parameterValue", "value": "{{DLV - form_id}}"}
+            ]}
+          ]},
+          {"type": "TEMPLATE", "key": "measurementIdOverride", "value": "G-788G7VTDM6"}
+        ],
+        "firingTriggerId": ["15"],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {"type": "MAP"}
+      }
+    ],
+    "builtInVariable": [
+      {"accountId": "0", "containerId": "0", "type": "PAGE_URL", "name": "Page URL"},
+      {"accountId": "0", "containerId": "0", "type": "PAGE_PATH", "name": "Page Path"},
+      {"accountId": "0", "containerId": "0", "type": "PAGE_HOSTNAME", "name": "Page Hostname"},
+      {"accountId": "0", "containerId": "0", "type": "REFERRER", "name": "Referrer"},
+      {"accountId": "0", "containerId": "0", "type": "EVENT", "name": "Event"}
+    ],
+    "fingerprint": "0"
+  }
+}
