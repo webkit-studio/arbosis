@@ -18,20 +18,27 @@ a na to, co je nová etapa.
 
 | Věc | Stav |
 |---|---|
-| Strukturovaná data `LocalBusiness` (adresa, IČ, telefon, e-mail, seznam služeb) | zapsané na návrhu domovské stránky, jde ven s launchem |
+| Strukturovaná data `LocalBusiness` (adresa, IČ, telefon, e-mail, seznam služeb, působnost) | zapsané na návrhu domovské stránky, jde ven s launchem |
 | Rychlost, mobil, sémantické nadpisy, alt texty | součást buildu |
 | Sitemap a robots | Webflow generuje sám, po launchi ověřit |
 | Google Search Console | založit a ověřit doménu hned po spuštění |
 | Google Business Profile | zakládá Šimon; pro místní hledání je to **silnější než celý web** |
 | Titulek a popisek stránky | dopsat při překlopení na `/` |
 
+## Působnost
+
+**Celá Česká republika** — potvrzeno 4. 9. 2026. Zapsané v `areaServed`
+u firmy i u každé ze sedmi služeb.
+
+Stojí za to vědět, co to pro vyhledávání znamená: `areaServed` říká
+Googlu, kam Arbosis jezdí, ale **neudělá z webu výsledek pro „zahradník
+Brno".** Místní balíček nad organickými výsledky se řídí polohou firmy
+a profilem na Google Business, ne tímhle polem. Celorepubliková
+působnost se na webu prodá obsahem — realizacemi z různých krajů
+a větou v textu — ne jedním údajem ve strukturovaných datech.
+
 ## Co chybí a bez čeho místní SEO nemá o co se opřít
 
-- **Působnost.** Do strukturovaných dat patří `areaServed` — okresy nebo
-  kraje, kde Arbosis pracuje. V Notionu je to pořád otevřená otázka
-  („okolí Prahy, směrem na Liberec, do Ostravy ne"). Dokud to Šimon
-  neupřesní, pole se záměrně nevyplňuje — vymyšlená působnost je horší
-  než žádná.
 - **Google Business Profile.** U dotazů typu „zahradník Praha" rozhoduje
   mapový blok nad organickými výsledky. Profil s fotkami a recenzemi
   přinese víc než jakákoliv úprava webu.
