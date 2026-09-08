@@ -62,9 +62,36 @@ a jemné doladění. Sedí ke citaci o svahu doslova — na fotce je ten
 zpevněný svah s protierozní rohoží.
 
 **Tým.** Šimon napsal, že kluci na web nechtějí a bude tam sám. Ze tří
-stohovaných koleček zůstalo jedno. Fotka je mobilní portrét proti
-béžové zdi, ale v kolečku 52 px to nevadí a zelené polo s logem tomu
-pomáhá.
+stohovaných koleček zůstalo jedno — a pak celý blok skrytý. Jeden avatar
+sám nepodporoval narativ firmy s 35 lety za sebou. `.kontakt_team` má
+`display: none`, prvek zůstal, takže se tým dá kdykoliv vrátit.
+
+## Město a rok u fotky
+
+Kolekce **Fotografie** má pole `Město` (text) a `Rok` (číslo). Náhled u služby
+je skládá do popisku `ÚVALY · 2024` u spodní hrany.
+
+**Hodnoty jsou zatím zástupné.** Šimon je před spuštěním přepíše.
+
+| Služba | Město | Rok |
+|---|---|---|
+| Návrhy a projektová dokumentace | Úvaly | 2024 |
+| Realizace zahrad na klíč | Říčany | 2023 |
+| Pokládka travního koberce | Čelákovice | 2025 |
+| Zavlažovací systémy | Brandýs nad Labem | 2024 |
+| Profesionální řez stromů | Mnichovice | 2023 |
+| Rizikové kácení | Kostelec nad Černými lesy | 2024 |
+| Údržba a sezónní péče | Xaverov | 2025 |
+
+### Pozor u tří dogenerovaných fotek
+
+Město a rok mění ilustraci v **tvrzení o konkrétní zakázce**. U čtyř fotek
+od Šimona je to v pořádku — jsou to skutečné realizace, jen je potřeba
+doplnit skutečné údaje. U tří dogenerovaných (řez stromů, rizikové kácení,
+údržba) žádná zakázka za fotkou nestojí, takže je není čím vyplnit pravdivě.
+
+Pole se dají nechat prázdná — modul si s tím poradí a popisek u těch tří
+prostě nebude. Rozhodnutí je na Šimonovi.
 
 ## Střídání fotek je vypnuté
 
@@ -82,7 +109,41 @@ a přepínač zapnout. Do kódu se nesahá.
   Dvojka a čtyřka jsou na výšku — dobré, ale žádný slot na webu je
   v tomhle poměru nepotřebuje.
 
+## Náhled u služeb se předehřívá
+
+Skrytý feed je `1 × 1 px`, `opacity: 0` a odsunutý na `left: -9999px`.
+Prohlížeč obrázky v takovém kontejneru odkládá — adresu z něj modul přečte
+hned, ale bitmapa se stahovala až při přiřazení viditelnému panelu, což
+bylo na prvním najetí vidět jako bliknutí prázdného panelu.
+
+Modul je proto po načtení stránky sériově stáhne do cache, a to až
+v nečinné chvíli, aby to nesoupeřilo s vykreslením stránky. Viz
+`warmPhotos()` v `src/modules/30-sluzby.js`.
+
+Panel má `clamp(420px, 42vw, 680px)`, tedy na běžném notebooku zhruba
+600 px místo původních 433.
+
 ## Co zůstalo na Designer
+
+### 1. Navázat Město a Rok na CMS
+
+Ve skrytém feedu u služeb je blok `.sluzby_feed-meta` a v něm dva prázdné
+divy. Do každého patří jedno CMS pole:
+
+| Div (v Navigatoru pod `.sluzby_feed-meta`) | Co do něj přetáhnout |
+|---|---|
+| první, má atribut `data-scity` | pole **Město** |
+| druhý, má atribut `data-syear` | pole **Rok** |
+
+Postup u obou stejný: klikni na ten div, v panelu vpravo otevři nastavení
+textu a zvol **Get text from → Město** (resp. **Rok**). Nepřidávej dovnitř
+nový prvek, text patří přímo do toho divu.
+
+Dokud to není navázané, stojí v obou divech zástupný text „Město" a „Rok".
+**Na webu to nic nerozbije** — modul zástupný text pozná a popisek nechá
+prázdný. Po navázání naskočí sám, do kódu se nesahá.
+
+### 2. Dva alt texty
 
 Prvek Image ve Webflow nepřijímá vlastní atributy (viz `CLAUDE.md`),
 takže dva alt texty zapsané na prvku přes API přepsat nejdou:
