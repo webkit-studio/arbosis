@@ -58,10 +58,20 @@ nepotká. Odesílatel může zůstat `Arbosis <info@arbosis.cz>`.
 
 1. API klíč z Resendu (zakládá Šimon).
 2. Přístup k DNS `arbosis.cz` — má Lukáš, stačí pokyn.
-3. Text potvrzovacího e-mailu. Návrh: poděkování, souhrn toho, co
-   vyplnil, a lhůta. **Lhůtu potvrdí Šimon** — na callu padlo 24–72 hodin,
-   ale potvrzené to není. Do e-mailu, který odejde zákazníkovi, se číslo
-   nesmí dostat odhadem.
+3. Text obou e-mailů — hotový, odsouhlasený 4. 9. 2026. Náhled je
+   v `docs/emaily/nahled.html`, stačí otevřít v prohlížeči.
+
+### Lhůta odpovědi
+
+**48 hodin.** Stejné číslo, jaké slibuje web — jinak by si zákazník
+přečetl dva různé sliby na dvou místech.
+
+### Nadpisy
+
+| E-mail | Nadřazený řádek | Nadpis |
+|---|---|---|
+| Šimonovi | Nová poptávka | Někdo právě vyplnil formulář na webu Arbosis. |
+| Zákazníkovi | Děkujeme | Vaši zprávu jsme dostali a už se jí věnujeme. |
 
 ## reCAPTCHA
 
