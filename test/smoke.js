@@ -59,12 +59,13 @@ const PAGE = `
       <div class="sluzby_media" data-smedia><img class="sluzby_photo" src="realizace.webp" alt=""></div>
     </div>
   </div>
-  <div class="sluzby_panel" data-spanel><img src="navrhy.webp" alt=""></div>
+  <div class="sluzby_panel" data-spanel><img src="navrhy.webp" alt=""><div data-smetaout></div></div>
   <div class="sluzby_feed">
     <div data-sitem>
       <div class="w-dyn-list"><div role="list"><div role="listitem"><img data-sphoto src="cms-navrhy.webp" alt=""></div></div></div>
       <div data-sname>Návrhy a projektová dokumentace</div>
       <div data-scycle class="w-condition-invisible"></div>
+      <div data-scity>Úvaly</div><div data-syear>2024</div>
     </div>
     <div data-sitem>
       <div class="w-dyn-list"><div role="list">
@@ -73,6 +74,7 @@ const PAGE = `
       </div></div>
       <div data-sname>Realizace zahrad na klíč</div>
       <div data-scycle></div>
+      <div data-scity>Město</div><div data-syear>Rok</div>
     </div>
   </div>
   <a class="link_big" data-gtm="cta" href="#kontakt">Chci méně starostí</a>
@@ -209,11 +211,17 @@ async function main() {
      proto konec, ne celý řetězec. */
   ok('náhled ukazuje fotku najetého řádku', /realizace\.webp$/.test(panel.getAttribute('src')));
   ok('náhled se otevřel', doc.querySelector('[data-spanel]').style.opacity === '1');
+  /* Druhá služba má pole v Designeru zatím nenavázaná, takže v nich stojí
+     zástupný text. Ten se do popisku pustit nesmí. */
+  ok('nenavázaná pole nechají popisek prázdný',
+    doc.querySelector('[data-smetaout]').textContent === '');
 
   /* Fotka jde z CMS, ne z obrázku na řádku — feed má u první služby jinou
      adresu než samotný řádek, takže je poznat, která vyhrála. */
   doc.querySelectorAll('[data-srow]')[0].dispatchEvent(new win.Event('mouseenter'));
   ok('náhled bere fotku z CMS, ne z řádku', /cms-navrhy\.webp$/.test(panel.getAttribute('src')));
+  ok('popisek nese město a rok z CMS',
+    doc.querySelector('[data-smetaout]').textContent === 'Úvaly \u00b7 2024');
 
   /* Střídat fotky je u první služby vypnuté (w-condition-invisible). */
   await new Promise((r) => setTimeout(r, 700));

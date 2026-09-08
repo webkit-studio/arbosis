@@ -48,6 +48,9 @@ var SEL = {
   sluzbyName: '[data-sname]',
   sluzbyCycle: '[data-scycle]',
   sluzbyFeedPhoto: '[data-sphoto]',
+  sluzbyFeedCity: '[data-scity]',
+  sluzbyFeedYear: '[data-syear]',
+  sluzbyPanelMeta: '[data-smetaout]',
 
   /* postup */
   postupSection: '[data-psec]',
@@ -386,10 +389,68 @@ function push(payload) {
       var flag = $1(SEL.sluzbyCycle, item);
       map[name] = {
         photos: photos,
-        cycle: !!flag && !flag.classList.contains('w-condition-invisible')
+        cycle: !!flag && !flag.classList.contains('w-condition-invisible'),
+        meta: readMeta(item)
       };
     });
     return map;
+  }
+
+  /* Dokud pole nejsou v Designeru navázaná na CMS, nesou zástupný text.
+     Ten se do popisku pustit nesmí — vypsalo by to na webu „MĚSTO · ROK". */
+  var PLACEHOLDERS = { 'm\u011bsto': 1, rok: 1 };
+
+  function cell(item, selector) {
+    var el = $1(selector, item);
+    var value = el ? text(el) : '';
+    return PLACEHOLDERS[key(value)] ? '' : value.trim();
+  }
+
+  /* „Úvaly · 2024“, jen z toho, co je vyplněné. */
+  function readMeta(item) {
+    var parts = [];
+    var city = cell(item, SEL.sluzbyFeedCity);
+    var year = cell(item, SEL.sluzbyFeedYear);
+    if (city) parts.push(city);
+    if (year) parts.push(year);
+    return parts.join(' \u00b7 ');
+  }
+
+  /* PROČ SE FOTKY PŘEDEHŘÍVAJÍ. Skrytý feed je 1 × 1 px, průhledný
+     a odsunutý na left: -9999px. Prohlížeč takové obrázky odkládá — adresu
+     z něj přečteme hned, ale bitmapa se stahuje až ve chvíli, kdy ji
+     přiřadíme viditelnému náhledu. Na prvním najetí to bylo vidět jako
+     bliknutí prázdného panelu.
+
+     Po načtení stránky si je proto stáhneme dopředu do cache prohlížeče.
+     Sériově a až v nečinné chvíli, aby to nesoupeřilo s vykreslením
+     stránky — než návštěvník doscrolluje ke Službám, je hotovo. */
+  function warmPhotos(feed) {
+    var seen = {};
+    var queue = [];
+    Object.keys(feed).forEach(function (name) {
+      feed[name].photos.forEach(function (url) {
+        if (url && !seen[url]) {
+          seen[url] = true;
+          queue.push(url);
+        }
+      });
+    });
+    if (!queue.length) return;
+
+    var i = 0;
+    function next() {
+      if (i >= queue.length) return;
+      var img = new Image();
+      img.onload = next;
+      img.onerror = next;
+      img.src = queue[i];
+      i += 1;
+    }
+
+    var idle = window.requestIdleCallback || function (fn) { setTimeout(fn, 300); };
+    if (document.readyState === 'complete') idle(next);
+    else window.addEventListener('load', function () { idle(next); });
   }
 
   function entryFor(feed, row) {
@@ -405,6 +466,11 @@ function push(payload) {
     return main ? [main.currentSrc || main.src] : [];
   }
 
+  function metaOf(feed, row) {
+    var entry = entryFor(feed, row);
+    return (entry && entry.meta) || '';
+  }
+
   function cyclesOf(feed, row) {
     var entry = entryFor(feed, row);
     return !!entry && entry.cycle;
@@ -416,12 +482,14 @@ function push(payload) {
     if (!rows.length) return;
 
     var feed = readFeed();
+    warmPhotos(feed);
 
     var desktop = window.matchMedia('(min-width: ' + DESKTOP_MIN + 'px)');
 
     /* ---- náhled u kurzoru (počítač) ------------------------------------ */
     var panel = $1(SEL.sluzbyPanel);
     var panelImage = panel && $1('img', panel);
+    var panelMeta = panel && $1(SEL.sluzbyPanelMeta, panel);
     var timer = null;
     var frames = [];
     var index = 0;
@@ -442,6 +510,7 @@ function push(payload) {
       stopRotation();
       frames = photosOf(feed, row);
       index = 0;
+      if (panelMeta) panelMeta.textContent = metaOf(feed, row);
       if (!frames.length) return;
       show();
       /* Střídá se jen když si to služba v CMS vyžádala a fotek je víc. */
