@@ -163,6 +163,19 @@ body {
   }
 }
 
+/* --- Přeložené avatárky v Kontaktu ---------------------------------------
+   Avatárky chodí z CMS (kolekce Náš tým), aby si je klient doplňoval sám.
+   Všechny položky Collection Listu jsou tedy stejné a kombo třída
+   .kontakt_avatar.is-stacked se na druhou a další nedá nakliknout —
+   ve style panelu není „druhý a další sourozenec".
+
+   Proto sousedský selektor, který Webflow zapsat neumí. První avatárka
+   zůstává na místě, každá další se přeloží o 14 px přes předchozí. */
+
+.kontakt_team-list > .w-dyn-item + .w-dyn-item .kontakt_avatar {
+  margin-left: -14px;
+}
+
 /* --- Viditelný focus -----------------------------------------------------
    Jeden prstenec pro všechny ovládací prvky. Ve Webflow by se musel
    naklikat zvlášť na každé třídě a při přidání dalšího tlačítka by se na
