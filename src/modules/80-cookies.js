@@ -19,6 +19,14 @@
    kategorie tu vědomě není — web žádnou reklamu neměří. Až přibude, přidá
    se sem i do zásad, ne jenom sem.
 
+   MICROSOFT CLARITY ČEKÁ NA STEJNÝ SOUHLAS. Clarity nahrává pohyb kurzoru,
+   kliky a scroll, takže spadá do analytické kategorie — a protože nahrává
+   chování, ne jen počty, nesmí začít dřív než GA4. Loader v hlavičce webu
+   si vytvoří frontu `window.clarity` ještě před stažením skriptu, takže se
+   volání `clarity('consent', …)` dá poslat hned a Clarity si ho přebere,
+   až doběhne. V projektu Clarity musí být zapnuté Settings → Cookie
+   consent, jinak si Clarity nastaví cookies bez ohledu na tohle volání.
+
    VOLBA SE PAMATUJE 6 MĚSÍCŮ. Pak se lišta zeptá znovu. Neomezená platnost
    souhlasu je věc, kterou ÚOOÚ vytýká.
    ========================================================================== */
@@ -52,7 +60,19 @@ function ccStored() {
   }
 }
 
+/** Souhlas pro Microsoft Clarity. Bez loaderu v hlavičce se nic nestane. */
+function ccClarity(analytics) {
+  if (typeof window.clarity !== 'function') return;
+  try {
+    window.clarity('consent', analytics);
+  } catch (e) {
+    /* Clarity se nenačetla (blokuje ji rozšíření). Měření je vedlejší,
+       lišta musí fungovat dál. */
+  }
+}
+
 function ccApply(analytics) {
+  ccClarity(analytics);
   ccGtag('consent', 'update', {
     ad_storage: 'denied',
     ad_user_data: 'denied',
@@ -102,7 +122,7 @@ var CC_HTML =
   '<div class="cc_cat-head"><span class="cc_cat-name">Analytick\u00e9</span>' +
   '<a href="#" class="cc_switch" data-cc-toggle role="switch" aria-checked="false"><span class="cc_knob"></span></a>' +
   '</div>' +
-  '<p class="cc_cat-desc">Google Analytics. Souhrnn\u011b: kolik lid\u00ed p\u0159i\u0161lo a odkud. Nic, podle \u010deho by \u0161lo poznat konkr\u00e9tn\u00edho \u010dlov\u011bka.</p>' +
+  '<p class="cc_cat-desc">Google Analytics a Microsoft Clarity. Kolik lid\u00ed p\u0159i\u0161lo, odkud a kter\u00e9 sekce \u010detli. Nic, podle \u010deho by \u0161lo poznat konkr\u00e9tn\u00edho \u010dlov\u011bka.</p>' +
   '</div>' +
   '</div>' +
   '<div class="cc_panel-actions">' +
