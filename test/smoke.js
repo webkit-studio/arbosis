@@ -59,7 +59,7 @@ const PAGE = `
       <div class="sluzby_media" data-smedia><img class="sluzby_photo" src="realizace.webp" alt=""></div>
     </div>
   </div>
-  <div class="sluzby_panel" data-spanel><img src="navrhy.webp" alt=""><div data-smetaout></div></div>
+  <div class="sluzby_panel" data-spanel><img src="navrhy.webp" sizes="(max-width: 1200px) 100vw, 1200px" srcset="navrhy-p-500.webp 500w, navrhy.webp 1200w" alt=""><div data-smetaout></div></div>
   <div class="sluzby_feed">
     <div data-sitem>
       <div class="w-dyn-list"><div role="list"><div role="listitem"><img data-sphoto src="cms-navrhy.webp" alt=""></div></div></div>
@@ -210,6 +210,10 @@ async function main() {
   /* Adresa se v prohlížeči i v jsdom ukládá jako absolutní — porovnává se
      proto konec, ne celý řetězec. */
   ok('náhled ukazuje fotku najetého řádku', /realizace\.webp$/.test(panel.getAttribute('src')));
+  /* Webflow dogeneruje varianty do srcset a ten by src přebil — všechny
+     služby by pak ukazovaly fotku, se kterou se stránka načetla. */
+  ok('srcset a sizes jsou z náhledu pryč',
+    !panel.hasAttribute('srcset') && !panel.hasAttribute('sizes'));
   ok('náhled se otevřel', doc.querySelector('[data-spanel]').style.opacity === '1');
   /* Druhá služba má pole v Designeru zatím nenavázaná, takže v nich stojí
      zástupný text. Ten se do popisku pustit nesmí. */
