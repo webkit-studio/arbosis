@@ -6,7 +6,8 @@
     "build": "node build.js",
     "test": "node test/smoke.js",
     "lint": "npx eslint src/modules build.js test",
-    "check": "npm run build && npm run test && npm run lint"
+    "check": "npm run build && npm run test && npm run lint",
+    "porovnej": "python3 test/porovnej-stranky.py"
   },
   "license": "UNLICENSED",
   "private": true,
