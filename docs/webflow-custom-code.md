@@ -61,3 +61,31 @@ GTM loader a cokoliv dalšího, co tam mezitím přibylo.
 Outfit se načítá **nativně přes Webflow** (Site settings → Fonts → Google
 Fonts, řezy 200/400/600/800). Do custom kódu se font nepřidává — byl by
 načtený dvakrát.
+
+## Přenos obsahu mezi stránkami se dělá v Designeru
+
+**Data API to neumí.** Ověřeno třemi způsoby:
+
+| Pokus | Výsledek |
+|---|---|
+| `update_page_settings` se slugem na domovské stránce | tiše ignorováno, vrací `slug: null` |
+| `update_page_settings` s prázdným slugem na jiné stránce | `400 — Slug can't be set to empty string` |
+| `move_element` s prvkem z jiné stránky | `Target element not found` |
+
+Domovská stránka je ve Webflow strukturálně pevná — je to ta bez slugu a přes
+API se přeznačit nedá. Obsah se proto přenáší v Designeru: otevřít zdrojovou
+stránku, v Navigatoru vybrat obsah `main-wrapper`, Copy, otevřít cílovou
+stránku, smazat její obsah, Paste. Copy/paste v rámci jednoho webu si nese
+i vazby na CMS, interakce a nastavení formuláře — `data_whtml_builder` ne,
+ten by z markupu udělal statické prvky.
+
+### Po přenosu vždy porovnat
+
+```sh
+npm run porovnej -- https://arbosis.webflow.io/nova-homepage https://arbosis.webflow.io/
+```
+
+Porovná šest vrstev zvlášť — posloupnost tagů, třídy, hook atributy, obrázky,
+odkazy, texty — takže je vidět, na čem se stránky liší, ne jen že se liší.
+Ztratit se dá potichu jedna CMS vazba nebo jeden hook atribut a na oko to
+nepoznáš.
