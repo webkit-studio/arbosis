@@ -22,10 +22,19 @@ tlačítko Save Changes, bez něj se publikuje stará verze.
 <meta name="theme-color" content="#1B3A2D" />
 <!-- End Theme Color -->
 
+<!-- Consent Mode v2 -->   ... gtag('consent', 'default', { … denied … })
+<!-- Google Tag Manager --> ... GTM-KSXFM72X
+<!-- Microsoft Clarity -->  ... projekt yfh7o6lhw0, viz docs/analytika.md
+
 <!-- Webkit Studio Code -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/webkit-studio/arbosis@<commit>/dist/arbosis.min.css" />
 <!-- End Webkit Studio Code -->
 ```
+
+Bloky nad naším `<link>` jsou zkrácené schválně — **plný obsah se nikdy
+neskládá z tohohle souboru.** Vždycky `data_scripts_tool >
+get_site_freeform_code`, v načteném textu vyměnit jen hash a poslat zpátky
+celé pole.
 
 ## Footer
 

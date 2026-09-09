@@ -140,10 +140,33 @@ GA4 heatmapy **neumí** a nikdy neumělo. Potřebuje se druhý nástroj:
 | **Microsoft Clarity** | zdarma, bez limitu relací | doporučuju — heatmapy, nahrávky relací, rage clicks, propojí se s GA4 |
 | Hotjar | free tier omezený počtem relací | pro jednostránku zbytečné platit |
 
-Clarity se nasazuje jako tag v GTM, takže se stejně jako GA4 řídí souhlasem
-z cookie lišty. Na jednostránce s pár stovkami návštěv měsíčně dá heatmapa
-odpověď na jedinou užitečnou otázku: **kam lidé doscrollují a kde přestanou**.
-To se hodí hlavně u sekce Postup a formuláře.
+Na jednostránce s pár stovkami návštěv měsíčně dá heatmapa odpověď na jedinou
+užitečnou otázku: **kam lidé doscrollují a kde přestanou**. To se hodí hlavně
+u sekce Postup a formuláře.
+
+### Clarity je nasazená (9. 9. 2026)
+
+Projekt `yfh7o6lhw0`. **Loader je v Site settings → Custom Code → Head**, ne
+jako tag v GTM. Přes GTM by to šlo taky, ale hlavička má jednu výhodu, která
+pro nahrávky rozhoduje: Clarity si vytvoří frontu `window.clarity` dřív, než
+doběhne GTM, takže se souhlas dá odeslat okamžitě a žádné volání se neztratí.
+
+**Souhlas posílá cookie lišta,** ne GTM. Vedle `consent update` pro Consent
+Mode jde ven i `clarity('consent', true|false)` — viz `ccClarity()`
+v `src/modules/80-cookies.js`. Ověřeno v prohlížeči na publikované stránce:
+před kliknutím do lišty je fronta `window.clarity.q` prázdná, po kliknutí
+v ní je právě jedno volání se správnou hodnotou.
+
+Dvě věci jsou v účtu Clarity, ne v kódu:
+
+| Nastavení | Proč na něm záleží |
+|---|---|
+| **Settings → Cookie consent: zapnuto** | bez toho si Clarity nastaví cookies bez ohledu na naše volání a souhlas je na papíře |
+| **Masking: ponechat na výchozí úrovni** | zásady ochrany osobních údajů tvrdí, že obsah políček formuláře se nezaznamenává. Kdyby masking někdo zmírnil, je ten text nepravdivý |
+
+Zásady ochrany osobních údajů Clarity jmenují ve čtyřech místech: měření
+návštěvnosti, doba uchování (záznamy 30 dní), seznam zpracovatelů
+(Microsoft Corporation) a předávání mimo EU.
 
 ## Co zatím nedělat
 
