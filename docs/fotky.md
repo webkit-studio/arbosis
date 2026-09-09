@@ -116,9 +116,33 @@ Prohlížeč obrázky v takovém kontejneru odkládá — adresu z něj modul p�
 hned, ale bitmapa se stahovala až při přiřazení viditelnému panelu, což
 bylo na prvním najetí vidět jako bliknutí prázdného panelu.
 
-Modul je proto po načtení stránky sériově stáhne do cache, a to až
-v nečinné chvíli, aby to nesoupeřilo s vykreslením stránky. Viz
-`warmPhotos()` v `src/modules/30-sluzby.js`.
+Modul je proto sériově stáhne do cache, a to až v nečinné chvíli, aby to
+nesoupeřilo s vykreslením stránky. Viz `warmPhotos()`
+v `src/modules/30-sluzby.js`.
+
+**Spouští to první pohyb návštěvníka, ne vzdálenost sekce.** Původně se
+čekalo, až bude sekce Služby 1 200 px od okna. Měření na publikované stránce
+ukázalo, že Služby začínají 117 px (1920 × 1080) až 296 px (1440 × 900) pod
+spodní hranou okna — jakákoliv rezerva, která dá scrollujícímu návštěvníkovi
+předstih, proto zabírá i první obrazovku a předehřívání se spustilo hned po
+načtení. Dnes to spustí dřívější ze dvou věcí: první scroll, nebo sekce
+v zorném poli (kvůli příchodu na odkaz `#sluzby`, kde se nescrolluje).
+
+Co to udělalo se stahováním při načtení stránky:
+
+| Okno | Před | Po |
+|---|---|---|
+| 1440 × 900 | 3 242 kB | 1 113 kB |
+| 1920 × 1080 | 3 242 kB | 1 113 kB |
+| 390 × 844 | 5 121 kB | 2 992 kB |
+
+Náhled je po najetí pořád načtený okamžitě, i při příchodu přímo na
+`#sluzby`.
+
+**Na mobilu zbývá 1,9 MB navíc a je to tak správně.** Na malých oknech má
+`.sluzby_media` `display: block` (fotka se otevírá scrollem, ne najetím),
+takže Webflow stahuje fotku každého řádku. Návštěvník, který seznam
+proscrolluje, všech sedm opravdu uvidí — není to tedy stahování naprázdno.
 
 Panel má `clamp(420px, 42vw, 680px)`, tedy na běžném notebooku zhruba
 600 px místo původních 433.
