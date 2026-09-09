@@ -527,9 +527,26 @@ function push(payload) {
     var frames = [];
     var index = 0;
 
+    /* SRCSET PŘEBÍJÍ SRC, PROTO SE MUSÍ PRYČ. Webflow k obrázku dogeneruje
+       varianty a zapíše je do srcset (…-p-500, -p-800, -p-1080). Prohlížeč
+       si pak vybírá z srcset a atributu src si nevšímá — dosazená fotka se
+       nezobrazí a v panelu zůstane viset ta, se kterou se stránka načetla.
+       Vypadá to, jako by všechny služby měly stejný obrázek.
+
+       Zrušit se to musí za běhu: srcset dosazuje Webflow při publikaci
+       a v Designeru se na prvku Image smazat nedá. Stačí jednou, pak už
+       je prvek „čistý" a src platí. */
+    function odpojSrcset() {
+      if (!panelImage) return;
+      if (panelImage.hasAttribute('srcset')) panelImage.removeAttribute('srcset');
+      if (panelImage.hasAttribute('sizes')) panelImage.removeAttribute('sizes');
+    }
+
     function show() {
       var url = frames[index % frames.length];
-      if (url && panelImage.getAttribute('src') !== url) panelImage.setAttribute('src', url);
+      if (!url || !panelImage) return;
+      odpojSrcset();
+      if (panelImage.getAttribute('src') !== url) panelImage.setAttribute('src', url);
     }
 
     function stopRotation() {
