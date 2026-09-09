@@ -108,10 +108,17 @@
      přiřadíme viditelnému náhledu. Na prvním najetí to bylo vidět jako
      bliknutí prázdného panelu.
 
-     Po načtení stránky si je proto stáhneme dopředu do cache prohlížeče.
-     Sériově a až v nečinné chvíli, aby to nesoupeřilo s vykreslením
-     stránky — než návštěvník doscrolluje ke Službám, je hotovo. */
-  function warmPhotos(feed) {
+     Stahujeme je proto dopředu do cache prohlížeče — ale až když se sekce
+     Služby blíží do zorného pole, ne hned po načtení. Sedm fotek váží
+     přes dva megabajty a návštěvník, který skončí na formuláři nahoře,
+     by je stahoval zbytečně. Rezerva WARM_MARGIN je víc než výška okna,
+     takže než se doscrolluje a stihne pohnout myší, je hotovo.
+
+     Sériově schválně: sedm souběžných stahování by soupeřilo s fotkami,
+     které jsou zrovna vidět. */
+  var WARM_MARGIN = '1200px';
+
+  function warmPhotos(feed, section) {
     var seen = {};
     var queue = [];
     Object.keys(feed).forEach(function (name) {
@@ -135,8 +142,25 @@
     }
 
     var idle = window.requestIdleCallback || function (fn) { setTimeout(fn, 300); };
-    if (document.readyState === 'complete') idle(next);
-    else window.addEventListener('load', function () { idle(next); });
+    function start() { idle(next); }
+
+    /* Bez IntersectionObserver (starší prohlížeč) se předehřeje po načtení
+       stránky — pořád lepší než čekat na první najetí. */
+    if (!section || !window.IntersectionObserver) {
+      if (document.readyState === 'complete') start();
+      else window.addEventListener('load', start);
+      return;
+    }
+
+    var watcher = new IntersectionObserver(
+      function (entries) {
+        if (!entries[0].isIntersecting) return;
+        watcher.disconnect();
+        start();
+      },
+      { rootMargin: WARM_MARGIN }
+    );
+    watcher.observe(section);
   }
 
   function entryFor(feed, row) {
@@ -168,7 +192,7 @@
     if (!rows.length) return;
 
     var feed = readFeed();
-    warmPhotos(feed);
+    warmPhotos(feed, list);
 
     var desktop = window.matchMedia('(min-width: ' + DESKTOP_MIN + 'px)');
 
