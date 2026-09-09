@@ -108,15 +108,23 @@
      přiřadíme viditelnému náhledu. Na prvním najetí to bylo vidět jako
      bliknutí prázdného panelu.
 
-     Stahujeme je proto dopředu do cache prohlížeče — ale až když se sekce
-     Služby blíží do zorného pole, ne hned po načtení. Sedm fotek váží
-     přes dva megabajty a návštěvník, který skončí na formuláři nahoře,
-     by je stahoval zbytečně. Rezerva WARM_MARGIN je víc než výška okna,
-     takže než se doscrolluje a stihne pohnout myší, je hotovo.
+     Stahujeme je proto dopředu do cache prohlížeče — ale až na první pohyb
+     návštěvníka, ne hned po načtení. Sedm fotek váží přes dva megabajty
+     a kdo skončí na formuláři nahoře, ten je stahovat nemusí.
+
+     PROČ NE PODLE VZDÁLENOSTI SEKCE. Měřeno na publikované stránce: Služby
+     začínají 117 px (1920 × 1080) až 296 px (1440 × 900) pod spodní hranou
+     okna. Jakákoliv rezerva, která dá scrollujícímu návštěvníkovi užitečný
+     předstih, tedy zabírá i první obrazovku a předehřívání se spustí hned
+     po načtení — přesně tomu jsme chtěli předejít. Geometrie tady nic
+     nerozlišuje, chování ano: kdo scrolluje, ten ke Službám dojede.
+
+     Spouští to dřívější ze dvou věcí: první scroll (vždycky dlouho předtím,
+     než je na co najet), nebo sekce v zorném poli — kvůli příchodu na
+     odkaz #sluzby, kde se nescrolluje vůbec.
 
      Sériově schválně: sedm souběžných stahování by soupeřilo s fotkami,
      které jsou zrovna vidět. */
-  var WARM_MARGIN = '1200px';
 
   function warmPhotos(feed, section) {
     var seen = {};
@@ -142,25 +150,26 @@
     }
 
     var idle = window.requestIdleCallback || function (fn) { setTimeout(fn, 300); };
-    function start() { idle(next); }
+    var watcher = null;
+    var started = false;
 
-    /* Bez IntersectionObserver (starší prohlížeč) se předehřeje po načtení
-       stránky — pořád lepší než čekat na první najetí. */
-    if (!section || !window.IntersectionObserver) {
-      if (document.readyState === 'complete') start();
-      else window.addEventListener('load', start);
-      return;
+    function start() {
+      if (started) return;
+      started = true;
+      window.removeEventListener('scroll', start);
+      if (watcher) watcher.disconnect();
+      idle(next);
     }
 
-    var watcher = new IntersectionObserver(
-      function (entries) {
-        if (!entries[0].isIntersecting) return;
-        watcher.disconnect();
-        start();
-      },
-      { rootMargin: WARM_MARGIN }
-    );
-    watcher.observe(section);
+    window.addEventListener('scroll', start, { passive: true });
+
+    /* Příchod na #sluzby: sekce je vidět a scrollovat není kam. */
+    if (section && window.IntersectionObserver) {
+      watcher = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) start();
+      });
+      watcher.observe(section);
+    }
   }
 
   function entryFor(feed, row) {

@@ -348,6 +348,10 @@ async function main() {
   const doc = win.document;
   win.dataLayer = [];
 
+  /* Clarity musí dostat stejnou odpověď jako GA4 — viz 80-cookies.js. */
+  const clarity = [];
+  win.clarity = (...args) => clarity.push(args);
+
   const bar = doc.querySelector('[data-cc-bar]');
   ok('lišta se ukázala, když souhlas chybí', bar !== null);
   ok('výchozí stav přepínače je vypnuto',
@@ -361,16 +365,24 @@ async function main() {
     win.dataLayer.some((e) => e && e.event === 'cookie_consent' && e.consent_analytics === 'denied'));
   ok('volba se uložila do prohlížeče',
     JSON.parse(win.localStorage.getItem('arbosis_cc')).analytics === false);
+  ok('Clarity dostala odmítnutí',
+    clarity.some((a) => a[0] === 'consent' && a[1] === false));
 }
 
 {
+  const clarity = [];
   const win = run('COOKIE LIŠTA — souhlas už padl', {
-    seed: (w) => w.localStorage.setItem('arbosis_cc',
-      JSON.stringify({ v: 1, analytics: true, ts: Date.now() }))
+    seed: (w) => {
+      w.clarity = (...args) => clarity.push(args);
+      w.localStorage.setItem('arbosis_cc',
+        JSON.stringify({ v: 1, analytics: true, ts: Date.now() }));
+    }
   });
   ok('lišta se podruhé neukázala', win.document.querySelector('[data-cc-bar]') === null);
   ok('souhlas se obnovil do dataLayeru',
     (win.dataLayer || []).some((e) => e && e.event === 'cookie_consent' && e.consent_analytics === 'granted'));
+  ok('Clarity dostala souhlas i při obnovení volby',
+    clarity.some((a) => a[0] === 'consent' && a[1] === true));
 }
 
 // --- 6. vypnuté animace ---------------------------------------------------
