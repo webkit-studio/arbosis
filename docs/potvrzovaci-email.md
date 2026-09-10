@@ -1,5 +1,10 @@
 # Potvrzení zákazníkovi a ochrana proti spamu
 
+> **Klient to 10. 9. 2026 definitivně odmítl.** Zákazník po odeslání
+> formuláře žádné potvrzení nedostane. Dokument zůstává jako podklad,
+> kdyby se to někdy otevřelo znovu — architektura i ceny platí.
+
+
 ## Potvrzovací e-mail
 
 ### Co Webflow neumí
