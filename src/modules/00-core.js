@@ -40,9 +40,6 @@ var SEL = {
   sluzbyName: '[data-sname]',
   sluzbyCycle: '[data-scycle]',
   sluzbyFeedPhoto: '[data-sphoto]',
-  sluzbyFeedCity: '[data-scity]',
-  sluzbyFeedYear: '[data-syear]',
-  sluzbyPanelMeta: '[data-smetaout]',
 
   /* postup */
   postupSection: '[data-psec]',

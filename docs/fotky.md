@@ -109,6 +109,27 @@ a přepínač zapnout. Do kódu se nesahá.
   Dvojka a čtyřka jsou na výšku — dobré, ale žádný slot na webu je
   v tomhle poměru nepotřebuje.
 
+## Popisek u fotky je alt, ne štítek
+
+Nad fotkou v náhledu visel štítek „ÚVALY · 2024“ plněný z polí Město a Rok
+v CMS. Klient ho 10. 9. 2026 zrušil — panel má být čistý a realizace se
+u jedné služby stejně střídají, takže jedno město a jeden rok nic neříkaly.
+Obě pole jsou z kolekce pryč.
+
+Popisek se přesunul do atributu `alt`. Pořád se edituje, jen jinde:
+
+| Kde | Co se tím popisuje |
+|---|---|
+| **CMS → fotka ve službě → popisek** | sedm fotek u služeb, tedy i to, co se ukáže v náhledu |
+| **Assets → alt** | hero, Pro firmy, reference, avatar |
+
+**Alt na assetu se propisuje sám.** Prvek Image ve Webflow má alt výchozí
+na `inherit`, takže obrázek přebírá popisek z assetu všude, kde ho někdo
+ručně nepřepsal. Nastavuje se tedy jednou.
+
+Když u fotky v CMS popisek nikdo nevyplní, modul dosadí název služby.
+Prázdný alt na obsahové fotce je horší než obecný.
+
 ## Náhled u služeb se předehřívá
 
 Skrytý feed je `1 × 1 px`, `opacity: 0` a odsunutý na `left: -9999px`.

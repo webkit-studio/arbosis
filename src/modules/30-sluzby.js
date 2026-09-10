@@ -69,37 +69,16 @@
       var photos = [];
       $$(SEL.sluzbyFeedPhoto, item).forEach(function (img) {
         var src = img.currentSrc || img.getAttribute('src');
-        if (src) photos.push(src);
+        if (src) photos.push({ src: src, alt: img.getAttribute('alt') || '' });
       });
 
       var flag = $1(SEL.sluzbyCycle, item);
       map[name] = {
         photos: photos,
-        cycle: !!flag && !flag.classList.contains('w-condition-invisible'),
-        meta: readMeta(item)
+        cycle: !!flag && !flag.classList.contains('w-condition-invisible')
       };
     });
     return map;
-  }
-
-  /* Dokud pole nejsou v Designeru navázaná na CMS, nesou zástupný text.
-     Ten se do popisku pustit nesmí — vypsalo by to na webu „MĚSTO · ROK". */
-  var PLACEHOLDERS = { 'm\u011bsto': 1, rok: 1 };
-
-  function cell(item, selector) {
-    var el = $1(selector, item);
-    var value = el ? text(el) : '';
-    return PLACEHOLDERS[key(value)] ? '' : value.trim();
-  }
-
-  /* „Úvaly · 2024“, jen z toho, co je vyplněné. */
-  function readMeta(item) {
-    var parts = [];
-    var city = cell(item, SEL.sluzbyFeedCity);
-    var year = cell(item, SEL.sluzbyFeedYear);
-    if (city) parts.push(city);
-    if (year) parts.push(year);
-    return parts.join(' \u00b7 ');
   }
 
   /* PROČ SE FOTKY PŘEDEHŘÍVAJÍ. Skrytý feed je 1 × 1 px, průhledný
@@ -130,10 +109,10 @@
     var seen = {};
     var queue = [];
     Object.keys(feed).forEach(function (name) {
-      feed[name].photos.forEach(function (url) {
-        if (url && !seen[url]) {
-          seen[url] = true;
-          queue.push(url);
+      feed[name].photos.forEach(function (foto) {
+        if (foto.src && !seen[foto.src]) {
+          seen[foto.src] = true;
+          queue.push(foto.src);
         }
       });
     });
@@ -182,12 +161,8 @@
 
     /* Bez CMS položky zůstává fotka nastavená přímo na řádku ve Webflow. */
     var main = $1('img', $1(SEL.sluzbyMedia, row) || row);
-    return main ? [main.currentSrc || main.src] : [];
-  }
-
-  function metaOf(feed, row) {
-    var entry = entryFor(feed, row);
-    return (entry && entry.meta) || '';
+    if (!main) return [];
+    return [{ src: main.currentSrc || main.src, alt: main.getAttribute('alt') || '' }];
   }
 
   function cyclesOf(feed, row) {
@@ -208,10 +183,10 @@
     /* ---- náhled u kurzoru (počítač) ------------------------------------ */
     var panel = $1(SEL.sluzbyPanel);
     var panelImage = panel && $1('img', panel);
-    var panelMeta = panel && $1(SEL.sluzbyPanelMeta, panel);
     var timer = null;
     var frames = [];
     var index = 0;
+    var nahradniAlt = '';
 
     /* SRCSET PŘEBÍJÍ SRC, PROTO SE MUSÍ PRYČ. Webflow k obrázku dogeneruje
        varianty a zapíše je do srcset (…-p-500, -p-800, -p-1080). Prohlížeč
@@ -228,11 +203,21 @@
       if (panelImage.hasAttribute('sizes')) panelImage.removeAttribute('sizes');
     }
 
+    /* POPISEK MÍSTO ŠTÍTKU. Dřív visel přes fotku štítek „ÚVALY · 2024“
+       plněný z CMS. Klient ho nechtěl, panel má zůstat čistý. Popisek se
+       proto přesunul do atributu alt — je pořád editovatelný (u fotky
+       v CMS), jen ho nevidí oko, ale čtečka a vyhledávání obrázků.
+
+       Když alt u fotky nikdo nevyplní, dosadí se název služby. Prázdný
+       alt na obsahové fotce je horší než obecný. */
     function show() {
-      var url = frames[index % frames.length];
-      if (!url || !panelImage) return;
+      var foto = frames[index % frames.length];
+      if (!foto || !foto.src || !panelImage) return;
       odpojSrcset();
-      if (panelImage.getAttribute('src') !== url) panelImage.setAttribute('src', url);
+      if (panelImage.getAttribute('src') !== foto.src) {
+        panelImage.setAttribute('src', foto.src);
+      }
+      panelImage.setAttribute('alt', foto.alt || nahradniAlt);
     }
 
     function stopRotation() {
@@ -246,7 +231,7 @@
       stopRotation();
       frames = photosOf(feed, row);
       index = 0;
-      if (panelMeta) panelMeta.textContent = metaOf(feed, row);
+      nahradniAlt = text($1('h3', row));
       if (!frames.length) return;
       show();
       /* Střídá se jen když si to služba v CMS vyžádala a fotek je víc. */
